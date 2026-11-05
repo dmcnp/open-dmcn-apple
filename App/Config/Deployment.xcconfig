@@ -1,0 +1,17 @@
+// What THIS build is, at build time: the reference app's identity. A fork or a product build
+// replaces these values; it must not ship under them. The bundle id below is the reference
+// app's own, and the name names the software, not a provider (see README, Trademarks).
+//
+// Runtime decisions that differ by deployment live in Shared/Deployment.swift.
+
+DMCN_DISPLAY_NAME = open-dmcn
+DMCN_BUNDLE_ID = dev.dmcn.open-dmcn
+
+// The host the sign-in form starts with, without a scheme (`//` starts an xcconfig comment).
+// Empty: the user types one.
+DMCN_DEFAULT_HOST =
+
+// Signing team. Set it in Local.xcconfig (gitignored), not here.
+DMCN_DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

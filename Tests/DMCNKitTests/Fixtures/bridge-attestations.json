@@ -1,0 +1,334 @@
+{
+ "domain_root_pub": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
+ "now": 1790000000,
+ "other_root_pub": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+ "vectors": [
+  {
+   "name": "genuine",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCA==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": true
+   }
+  },
+  {
+   "name": "all_pass_verified_tier",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoATABOAFIAVCAnYDMBlpAw9LSX5RULomEaYscZVjywWF/xGj7QXVEr80TxWVWq8x5xG6NC8OR73boqv5TCTKZm69pnWBTUeHRTGHL/UDHDWLKAQgBEiDtSSjGKNHCxurpAziQWZVhKVknOlxj+TY2wUYUrIc30RoOcGFyaXR5LmV4YW1wbGUqBmJyaWRnZToLCgJhYRIFZmlyc3Q6CQoCbW0SA21pZDoKCgJ6ehIEbGFzdECA8J3HBlogiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1xiQEdcRD7lPtYhkUzvr36LLp/NQfOBOLf6G0vrSJhepo42nX8sSlkQvzK6gwa8FIIHbHWVg+T9zkxZ43Bb0zN+FAg=",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "trustTier": 1,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "pass",
+    "dkim": "pass",
+    "dmarc": "pass",
+    "verified": true
+   }
+  },
+  {
+   "name": "zero_values_omitted",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZUgCUICdgMwGWkAPxGFhOU3AxOWp6H1RgmnlkAP1Oe9Bf+IA2ltyhBXQeS23Oiay6wAbeSTVqHMkbPYLFyw0D0AZeyESO3i4P+0JYsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCA==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "trustTier": 2,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "none",
+    "dkim": "none",
+    "dmarc": "none",
+    "verified": true
+   }
+  },
+  {
+   "name": "signer_is_not_message_author",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCA==",
+   "message_sender": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "classification signer is not the message author"
+   }
+  },
+  {
+   "name": "signature_by_another_key",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkDsLPKbjXKPMi+bXogpXzUyRUT+iBeugWV1LV4Xa4BFNrFf3jLFcpKvJmoT8ciTzklA/MPsxuhofPZ3Tl8rMr4CYsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCA==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "invalid bridge signature",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "invalid bridge signature"
+   }
+  },
+  {
+   "name": "no_credential",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewP",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "no bridge credential",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "no bridge credential"
+   }
+  },
+  {
+   "name": "credential_from_another_root",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCBOXcOqH0XX1ajVGbDTH7My42KkbTuN6Jd9g9bj8mzlGJAb1asuQ/CeuFqeOzMSnUJ8UL6c6v5+9BWBVrlFrZFrVe0JXs6kmK7IaJyKHdhjhNou6ZIungqfGCmbNloKnXBCw==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "bridge credential invalid: identity: fleet credential not signed by the operator root",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "bridge credential was not issued by this domain"
+   }
+  },
+  {
+   "name": "credential_for_another_key",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIMqTrBcFGHBx1nuDx/8O/oEI6OxFMFdddyaHkzPb2r58Ghdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkA434+Nee4z1PhDDcCJlM0UDLtauHNIDtLOMsQXty9XdWUDXKeQ1Uu4/AtIsSp25022B1s2UhxZHZ6BT595TMcPYsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCA==",
+   "message_sender": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+   "go_verified": false,
+   "go_reason": "bridge credential subject does not match the signing key",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "bridge credential is for a different key"
+   }
+  },
+  {
+   "name": "credential_without_bridge_role",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYsgBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoEbm9kZToLCgJhYRIFZmlyc3Q6CQoCbW0SA21pZDoKCgJ6ehIEbGFzdECA8J3HBlogiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1xiQD28TWwi8zgIMUcvP0ZPjEfquttglBKTt5dD/FUlb282vhQyjzR3uNzQaua8FpRD3ex1+mrsBS8uYHlNK68emAE=",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "credential does not carry the bridge role",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "credential does not carry the bridge role"
+   }
+  },
+  {
+   "name": "credential_expired",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYtABCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGSMCGz8kGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAxdZ+bV92rRHjlTBn2qVAOpatX0s4uZlrn46Eof5Iwqw+iJ85bubBfhAtrom4kK8UxZOyZ5/L0E1ip7D2PM6nCA==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "bridge credential invalid: identity: fleet credential expired at 2025-12-06 05:46:40 +0000 UTC",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "bridge credential has expired"
+   }
+  },
+  {
+   "name": "credential_not_yet_effective",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYtABCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJASPoUh8CcEW+vLxQMBmjzkuS7h1WHCiSqCMJczOaEYNo6E3RbdDuyYpl75otrTL9jiGdF+l4W2HvWSF/cjM5XCHCAuJK3Cg==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "bridge credential invalid: identity: fleet credential not yet effective until 2058-09-23 09:46:40 +0000 UTC",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "bridge credential is not yet valid"
+   }
+  },
+  {
+   "name": "credential_altered_after_signing",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYskBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg1vdGhlci5leGFtcGxlKgZicmlkZ2U6CwoCYWESBWZpcnN0OgkKAm1tEgNtaWQ6CgoCenoSBGxhc3RAgPCdxwZaIIqI4910CfGV/VLbLTy6XXLKZwm/HZQSG/N0iAG0D29cYkBHXEQ+5T7WIZFM769+iy6fzUHzgTi3+htL60iYXqaONp1/LEpZEL8yuoMGvBSCB2x1lYPk/c5MWeNwW9MzfhQI",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "bridge credential invalid: identity: credential signature invalid",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": false,
+    "reason": "bridge credential signature invalid"
+   }
+  },
+  {
+   "name": "not_a_record",
+   "kind": "classification",
+   "record": "////",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "unparsable",
+   "browser": {
+    "verified": false,
+    "trustTier": 0,
+    "smtpFrom": "",
+    "reason": "malformed classification record"
+   }
+  },
+  {
+   "name": "unknown_field_after_signature",
+   "kind": "classification",
+   "record": "ChIxMkQzS29vV1Bhcml0eVBlZXISIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGhdib3VuY2UrMUBtYWlsZXIuZXhhbXBsZSILMjAzLjAuMTEzLjcoAzABOAJA1v//////////AUgDUICdgMwGWkCOZL/pK7N+hRy7b3KF5bQwkRTWftB4GmrQFagv/ISMQP6HuVIG8Zm1qnnYFsJDQV/Q4B9hn6FoKLwb7JUUYewPYsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCJgGAQ==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "trustTier": 3,
+    "smtpFrom": "bounce+1@mailer.example",
+    "spf": "softfail",
+    "dkim": "pass",
+    "dmarc": "fail",
+    "verified": true
+   }
+  },
+  {
+   "name": "receipt_failed",
+   "kind": "receipt",
+   "record": "ChABAgMEBQYHCAkKCwwNDg8QEhJib2JAbGVnYWN5LmV4YW1wbGUaEjEyRDNLb29XUGFyaXR5UGVlciDknYDMBjIMbWFpbGJveCBmdWxsOkDOAkzq9B5thGHX2PN6tkIj8aNUX/i3qf37pNkcoVtVoX3/sN3P7XhrKPPxMh+3GaHOYBPdKRhdoOCzt41qY6UEQsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCA==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "recipientEmail": "bob@legacy.example",
+    "errorDetail": "mailbox full",
+    "verified": true
+   }
+  },
+  {
+   "name": "receipt_delivered",
+   "kind": "receipt",
+   "record": "ChABAgMEBQYHCAkKCwwNDg8QEhJib2JAbGVnYWN5LmV4YW1wbGUaEjEyRDNLb29XUGFyaXR5UGVlciDknYDMBigBOkDEveQ7GNVB51jGOHvRrjXHqaxu7t69Eh9mFo1QWTZFdjSf9aApQnX2Qhkuik8jpQIBLt6aC0iqDehGoLu0dgULQsoBCAESIO1JKMYo0cLG6ukDOJBZlWEpWSc6XGP5NjbBRhSshzfRGg5wYXJpdHkuZXhhbXBsZSoGYnJpZGdlOgsKAmFhEgVmaXJzdDoJCgJtbRIDbWlkOgoKAnp6EgRsYXN0QIDwnccGWiCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXGJAR1xEPuU+1iGRTO+vfosun81B84E4t/obS+tImF6mjjadfyxKWRC/MrqDBrwUggdsdZWD5P3OTFnjcFvTM34UCA==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "delivered": true,
+    "recipientEmail": "bob@legacy.example",
+    "verified": true
+   }
+  },
+  {
+   "name": "receipt_signed_by_another_key",
+   "kind": "receipt",
+   "record": "ChABAgMEBQYHCAkKCwwNDg8QEhJib2JAbGVnYWN5LmV4YW1wbGUaEjEyRDNLb29XUGFyaXR5UGVlciDknYDMBjIBeDpAEutLEkG3JwgGZ51YDdHMsOhlgJ838/KCK2kaGhAGDNXFDIWzopUceVRsVheFSkyPcDhW/1ePC+PhjR4SF146B0LKAQgBEiDtSSjGKNHCxurpAziQWZVhKVknOlxj+TY2wUYUrIc30RoOcGFyaXR5LmV4YW1wbGUqBmJyaWRnZToLCgJhYRIFZmlyc3Q6CQoCbW0SA21pZDoKCgJ6ehIEbGFzdECA8J3HBlogiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1xiQEdcRD7lPtYhkUzvr36LLp/NQfOBOLf6G0vrSJhepo42nX8sSlkQvzK6gwa8FIIHbHWVg+T9zkxZ43Bb0zN+FAg=",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "invalid bridge signature",
+   "browser": {
+    "recipientEmail": "bob@legacy.example",
+    "errorDetail": "x",
+    "verified": false,
+    "reason": "invalid bridge signature"
+   }
+  },
+  {
+   "name": "receipt_not_from_message_author",
+   "kind": "receipt",
+   "record": "ChABAgMEBQYHCAkKCwwNDg8QEhJib2JAbGVnYWN5LmV4YW1wbGUaEjEyRDNLb29XUGFyaXR5UGVlciDknYDMBjIBeDpACOt6Rk0PmSb+W4jr9DRXY924+YpN5jUIgnJgr/NsDcXwMHNEXFM8++I9ys5E0gksFll8JoxhiLLsZ9FEwb+RBkLKAQgBEiDtSSjGKNHCxurpAziQWZVhKVknOlxj+TY2wUYUrIc30RoOcGFyaXR5LmV4YW1wbGUqBmJyaWRnZToLCgJhYRIFZmlyc3Q6CQoCbW0SA21pZDoKCgJ6ehIEbGFzdECA8J3HBlogiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1xiQEdcRD7lPtYhkUzvr36LLp/NQfOBOLf6G0vrSJhepo42nX8sSlkQvzK6gwa8FIIHbHWVg+T9zkxZ43Bb0zN+FAg=",
+   "message_sender": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+   "go_verified": true,
+   "go_reason": "",
+   "browser": {
+    "recipientEmail": "bob@legacy.example",
+    "errorDetail": "x",
+    "verified": false,
+    "reason": "invalid bridge signature"
+   }
+  },
+  {
+   "name": "receipt_no_credential",
+   "kind": "receipt",
+   "record": "ChABAgMEBQYHCAkKCwwNDg8QEhJib2JAbGVnYWN5LmV4YW1wbGUaEjEyRDNLb29XUGFyaXR5UGVlciDknYDMBjIBeDpACOt6Rk0PmSb+W4jr9DRXY924+YpN5jUIgnJgr/NsDcXwMHNEXFM8++I9ys5E0gksFll8JoxhiLLsZ9FEwb+RBg==",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "no bridge credential",
+   "browser": {
+    "recipientEmail": "bob@legacy.example",
+    "errorDetail": "x",
+    "verified": false,
+    "reason": "no bridge credential"
+   }
+  },
+  {
+   "name": "receipt_credential_for_another_key",
+   "kind": "receipt",
+   "record": "ChABAgMEBQYHCAkKCwwNDg8QEhJib2JAbGVnYWN5LmV4YW1wbGUaEjEyRDNLb29XUGFyaXR5UGVlciDknYDMBjIBeDpAEutLEkG3JwgGZ51YDdHMsOhlgJ838/KCK2kaGhAGDNXFDIWzopUceVRsVheFSkyPcDhW/1ePC+PhjR4SF146B0LKAQgBEiDtSSjGKNHCxurpAziQWZVhKVknOlxj+TY2wUYUrIc30RoOcGFyaXR5LmV4YW1wbGUqBmJyaWRnZToLCgJhYRIFZmlyc3Q6CQoCbW0SA21pZDoKCgJ6ehIEbGFzdECA8J3HBlogiojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1xiQEdcRD7lPtYhkUzvr36LLp/NQfOBOLf6G0vrSJhepo42nX8sSlkQvzK6gwa8FIIHbHWVg+T9zkxZ43Bb0zN+FAg=",
+   "message_sender": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+   "go_verified": false,
+   "go_reason": "invalid bridge signature",
+   "browser": {
+    "recipientEmail": "bob@legacy.example",
+    "errorDetail": "x",
+    "verified": false,
+    "reason": "bridge credential is for a different key"
+   }
+  },
+  {
+   "name": "receipt_not_a_record",
+   "kind": "receipt",
+   "record": "////",
+   "message_sender": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+   "go_verified": false,
+   "go_reason": "unparsable",
+   "browser": {
+    "verified": false,
+    "delivered": false,
+    "recipientEmail": "",
+    "reason": "malformed delivery receipt"
+   }
+  }
+ ]
+}

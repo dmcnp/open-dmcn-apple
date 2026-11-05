@@ -1,0 +1,5 @@
+version: v2
+# The core schema, mirrored byte-for-byte from open-dmcn's proto/ (see proto/README.md).
+# It is canonical there: never edit it here. This file only tells buf where it is.
+modules:
+  - path: proto

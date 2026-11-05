@@ -1,0 +1,19 @@
+{
+ "note": "A SealedBlob sealed and JSON-marshalled by Go's internal/core/message, to the owner key in browser-store.json. Test keys only.",
+ "plaintext": "Sealed in Go. ünïcödé ✓",
+ "blob": {
+  "nonce": "UuxpNovelCT/S3ep",
+  "ciphertext": "uthahfWxfrtIF4BBOren8Sx/ZoQukSMEHdrMJgw=",
+  "tag": "Q0RJXt3Etd3RN5R97WlVLw==",
+  "recipients": [
+   {
+    "recipient_xpub": "EyxEK+AQ+9V+cmAzKKp25x/MwVA6riGTJ9FNnJmT9HI=",
+    "ephemeral_xpub": "IZD01Gw4LsRpmZhsrwQwzhocFimLpa/huZy3N0x/P10=",
+    "wrapped_cek": "ETtqlQZNYuZWggfEeoCiYa/812xVRqyaPpm1B9Qd0d4=",
+    "cek_nonce": "+jB+knEyU2YBl2cZ",
+    "cek_tag": "/qDctn3WHRMumkIs/ZXblQ==",
+    "kdf": 2
+   }
+  ]
+ }
+}

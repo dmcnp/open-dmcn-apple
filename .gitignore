@@ -1,0 +1,10 @@
+# SwiftPM
+.build/
+.swiftpm/
+xcuserdata/
+DerivedData/
+
+# Per-developer signing
+App/Config/Local.xcconfig
+
+.DS_Store
