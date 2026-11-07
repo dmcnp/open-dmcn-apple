@@ -1,0 +1,19 @@
+{
+  "format": "dmcn-keystore-export",
+  "version": 1,
+  "address": "fixture@parity.example",
+  "ed25519Public": "x5ki1Hlhp1TvC6ZlQ9PmApit7+vNFUzd2FSCyY4D2Jw=",
+  "authMethod": "password",
+  "bundle": {
+    "salt": "7gMS7fivlLG2btPsLByGevbfwZ0oUer+fx9tdiRrcfg=",
+    "nonce": "TTTfgHCuto1PjR2C",
+    "ciphertext": "Rln9bE4YON+gRS149rfTWq39ctMvSPq3Qyy65g2ZHHGx167aGoiO7LyIezCdo9CqJ5AzU5I4zSc54VU/9cHYuIOcjV+B7FThRR6dvgg78wAIC8xGvsnqUwLsGITwgqVp8sv6IsDlYs04GbYPqnrK/Y0YkUybf8P4uguBzwMHJ74vYDQkOIQViS62d/4Aor52rQSykm05LLyW2ibZp65KcoUMDlgf+stUjdJhWEIqMG3c4EocIx75SDCJjqhb1LBhCHTfBvvs1fCVhOp4UQTIUTPG2LdSLP5B6XAGB4xkZpE9uWzvm8UL2OZVDQsNBcUNowB7f/4eY525gbUXHCVKC1kNh8Zvs24P+re9IX57Aq0NgE/B5x/jK3a+pabXWyn/3ZPFmjgftryJGOindA/VCpfuqxXIaFONH49CTpmMUacewAVD2MSwECBCLC4l50O4dJbtV3Qlc8lSv/gg5oUEx7ttaqfy6Rg2ZEzxuA==",
+    "tag": "KaEWkav6qAXxDO4x56yfgQ==",
+    "kdf": "argon2id",
+    "kdfParams": {
+      "m": 19456,
+      "t": 2,
+      "p": 1
+    }
+  }
+}

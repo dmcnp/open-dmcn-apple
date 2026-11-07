@@ -1,0 +1,15 @@
+{
+  "format": "dmcn-keystore-export",
+  "version": 1,
+  "address": "fixture@parity.example",
+  "ed25519Public": "x5ki1Hlhp1TvC6ZlQ9PmApit7+vNFUzd2FSCyY4D2Jw=",
+  "authMethod": "passkey",
+  "credentialId": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+  "prfSalt": "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+  "bundle": {
+    "salt": "",
+    "nonce": "B/J0/ob213DDj/3y",
+    "ciphertext": "l0nj8xcyhBzW06LcsCiFbNPgfIKdnEZwMTm+yfxpMixr8/WYhuJJFTjOzPjVxElUJ6I+4XtoAUAzwHqMQCz+zPja6RGObS7CN9CCBAu/J3J0T87SqtfSFlkFzfrwLwBVT4Gf/2/XsalLR7yAkR7xLdIAGHia5/5YI5T+fOUNh/DaWL6UdkjFt40ZuNoXrUvLYnpppsALrNZW6EU67xKA9d8Oa/9MNu/+Pa2WTjNQ6jWJpJBuzspBcCDT/WDxSUkXIROh38L/c8tdHTqQXQxROBBejjhf2znbrIg0WMIfzgUacuvBUY2hYJcRKCgD2pnyrNLO4FoHMXUPVNKQYPaHkjbiLyz0K1QBIP65/Z/wzaRgzCEhvJpRgdev3Qd88CKR5x8uyy2XCqNVAyJnJRvvnncR+2JBnuS3hQdNprcWYPzuBwFok+0NrLxP2oKdY39noOHxbptJXcJ+1ISOaDpTTbHEUzRYeGL9hx+1Lg==",
+    "tag": "SU+Puubishy0rw9Rcgcj5Q=="
+  }
+}

@@ -1,0 +1,9 @@
+version: v2
+# Generates the Swift types for the core schema into DMCNKit. protoc-gen-swift must be the
+# version of the swift-protobuf runtime Package.resolved pins; `make proto` builds it from that
+# checkout, so the generator and the runtime cannot drift apart.
+plugins:
+  - local: .build/tools/protoc-gen-swift
+    out: Sources/DMCNKit/Proto
+    opt:
+      - Visibility=Public

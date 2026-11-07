@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # DMCNKit on Linux: the mirror and notices checks, every test (the Go/browser parity vectors
+  # and the Go-sealed fixture included), and a regeneration of the Swift protobuf code that
+  # must come out identical to what is committed.
+  kit:
+    runs-on: ubuntu-latest
+    container: swift:6.4.2-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install buf
+        run: |
+          curl -fsSL -o /usr/local/bin/buf \
+            "https://github.com/bufbuild/buf/releases/download/v1.70.0/buf-Linux-$(uname -m)"
+          chmod +x /usr/local/bin/buf
+      - run: make test
+      - name: Generated code is current
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          make proto
+          git diff --exit-code -- Sources/DMCNKit/Proto
+
+  # The iOS app: build it for the simulator, unsigned.
+  app:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - run: make app
