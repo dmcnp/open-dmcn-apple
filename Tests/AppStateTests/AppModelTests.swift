@@ -130,6 +130,23 @@ private func signedIn(_ model: AppModel) throws -> MailSession {
         AppModel(vault: vault, defaults: UserDefaults(suiteName: UUID().uuidString)!)
     }
 
+    @Test func nothingIsDecidedUntilTheAccountsAreRead() async {
+        let vault = InMemoryVault()
+        let account = DeviceAccount(address: "ada@sample.example", host: "sample.example", protection: .passphrase)
+        await vault.save(account, secret: Data())
+        let model = model(vault)
+        guard case .starting = model.phase else {
+            Issue.record("must not offer set-up before knowing what's on the device")
+            return
+        }
+        await model.loadAccounts()
+        guard case .signedOut = model.phase else {
+            Issue.record("reading the accounts ends the wait")
+            return
+        }
+        #expect(model.accounts == [account])
+    }
+
     @Test func aWrongPassphraseStaysLockedAndSaysSo() async throws {
         let vault = InMemoryVault()
         let keys = KeyPayload.generate()
@@ -179,6 +196,12 @@ private func signedIn(_ model: AppModel) throws -> MailSession {
         let left = Date()
         model.didLeave(at: left)
         await model.didReturn(at: left.addingTimeInterval(AppModel.lockGrace - 1))
+        _ = try signedIn(model)
+    }
+
+    @Test func rereadingTheAccountsLeavesASessionOpen() async throws {
+        let model = await signedInModel()
+        await model.loadAccounts()
         _ = try signedIn(model)
     }
 

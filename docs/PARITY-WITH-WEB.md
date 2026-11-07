@@ -12,7 +12,7 @@ layout: top bar, drawer, list, reader, floating Compose, full-screen composer.
 
 Native on purpose: HTML mail wider than the view is scaled to fit, as Apple Mail does, rather than cut off. Sheets are the system's, with its rounded corners rather than the web's 4-point
 ones. Swipe actions come from `List`, so they look like iOS's rather than the web's
-hand-built ones. Text follows Dynamic Type, which the web can't. The reader has an edge swipe back.
+hand-built ones. Text follows Dynamic Type, which the web can't. The reader has an edge swipe back. The launch screen is the app icon on the page colour, which follows the system's light or dark setting even when the app's theme says otherwise, because iOS draws it before any of the app runs.
 
 ## Features
 

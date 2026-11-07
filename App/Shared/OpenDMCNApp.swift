@@ -20,6 +20,8 @@ struct RootView: View {
     var body: some View {
         Group {
             switch model.phase {
+            case .starting:
+                StartingView()
             case .signedOut:
                 SignedOutFlow()
             case .signedIn(let session):
@@ -43,4 +45,24 @@ struct RootView: View {
             }
         }
     }
+}
+
+/// The launch screen in `Info.plist`, carried on until the accounts are read, so the logo holds
+/// still from the tap to the first real screen. Same image, same background.
+private struct StartingView: View {
+    var body: some View {
+        Image("LaunchLogo")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.surfacePage)
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+    }
+}
+
+#Preview("Starting") {
+    StartingView()
+}
+
+#Preview("Starting, dark") {
+    StartingView().preferredColorScheme(.dark)
 }

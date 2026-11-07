@@ -28,7 +28,7 @@ struct SignedOutFlow: View {
         }
         .animation(Motion.normal, value: screen)
         // A request left waiting is where someone with nothing else here picks up again.
-        .onChange(of: model.pendingPetition) { _, pending in
+        .onChange(of: model.pendingPetition, initial: true) { _, pending in
             if pending != nil, model.accounts.isEmpty { screen = .register }
         }
     }

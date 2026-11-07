@@ -13,11 +13,13 @@ import Observation
 @Observable
 final class AppModel {
     enum Phase {
+        /// Nothing read from the vault yet, so there's no telling whether this device has accounts.
+        case starting
         case signedOut
         case signedIn(MailSession)
     }
 
-    private(set) var phase: Phase = .signedOut
+    private(set) var phase: Phase = .starting
     private(set) var accounts: [DeviceAccount] = []
     /// The mailbox request waiting on an admin, if there is one.
     private(set) var pendingPetition: DeviceAccount?
@@ -63,6 +65,7 @@ final class AppModel {
         let held = await vault.accounts()
         accounts = held.filter { $0.petitionCode == nil }
         pendingPetition = held.first { $0.petitionCode != nil }
+        if case .starting = phase { phase = .signedOut }
     }
 
     // MARK: Getting keys onto the device
