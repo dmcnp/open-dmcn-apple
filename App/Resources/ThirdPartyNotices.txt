@@ -218,7 +218,7 @@ swift-protobuf 1.39.0
     otherwise be required by Sections 4(a), 4(b) and 4(d) of the License.
 
 
-swift-crypto 5.0.3
+swift-crypto 5.1.1
 ------------------------------------------------------------------------
 
                             The SwiftCrypto Project
