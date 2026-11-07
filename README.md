@@ -110,6 +110,23 @@ Replace `App/Config/Deployment.xcconfig` (name, bundle id, default host) and
 `App/Shared/Deployment.swift` (the runtime differences). Do not ship under this
 repository's bundle id or display name, and see Trademarks below for the names.
 
+## Contributing
+
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has the rules for the
+code, and most of them protect interoperability, so please read it first.
+
+- **Bugs and proposals for the app or DMCNKit:** open an
+  [issue](https://github.com/dmcnp/open-dmcn-apple/issues) here.
+- **The protocol or the schema:** these change in
+  [open-dmcn](https://github.com/dmcnp/open-dmcn) first, so raise it there.
+- **Security vulnerabilities:** email security@dmcn.email. Please don't open a public issue.
+
+Before you open a pull request, run `make format` and `make test`. CI runs `make test` and
+`make app` on every pull request. Views and the Xcode project need a Mac to check, so if you
+couldn't run a change to them, say so in the pull request.
+
+Contributions are made under the Apache License, Version 2.0 (section 5 of [LICENSE](LICENSE)).
+
 ## License
 
 Licensed under the **Apache License, Version 2.0**; see [LICENSE](LICENSE) and
