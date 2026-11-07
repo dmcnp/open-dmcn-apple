@@ -13,6 +13,11 @@ jobs:
     container: swift:6.4.2-bookworm
     steps:
       - uses: actions/checkout@v4
+      # The Swift image removes curl once the toolchain is in, and never had make or python3.
+      - name: Install tools
+        run: |
+          apt-get -q update
+          apt-get -q install -y --no-install-recommends ca-certificates curl make python3
       - name: Install buf
         run: |
           curl -fsSL -o /usr/local/bin/buf \
