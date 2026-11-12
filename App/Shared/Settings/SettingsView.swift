@@ -352,6 +352,97 @@ private struct OrganiseTab: View {
             }
             .padding(Space.s4)
         }
+        SwipeToFileSection(session: session)
+    }
+}
+
+/// How many folder buttons a right swipe shows, which folder each one holds, and the senders whose
+/// new mail is filed for you. Synced across your devices.
+private struct SwipeToFileSection: View {
+    let session: MailSession
+
+    var body: some View {
+        let swipe = session.swipeFiling
+        let filled = swipe.assignments(session.folders)
+        SectionHeading(title: "Swipe to file")
+        SettingsCard {
+            SettingsRow(
+                title: "Folder buttons",
+                detail: "Swipe a message to the right to file it. Synced across your devices.",
+                stacked: true
+            ) {
+                Picker(
+                    "Folder buttons",
+                    selection: Binding(
+                        get: { swipe.count },
+                        set: { count in Task { await session.setSwipeCount(count) } })
+                ) {
+                    ForEach(SwipeFiling.choices, id: \.self) { count in
+                        Text(count == 0 ? "Off" : "\(count)").tag(count)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            ForEach(0..<swipe.count, id: \.self) { slot in
+                SettingsRow(title: "Button \(slot + 1)", detail: slotDetail(slot, filled: filled)) {
+                    Picker(
+                        "Button \(slot + 1)",
+                        selection: Binding(
+                            get: { swipe.isPinned(slot, among: session.folders) ? swipe.pins[slot] : "" },
+                            set: { id in Task { await session.pinSwipeSlot(slot, to: id.isEmpty ? nil : id) } })
+                    ) {
+                        Text("Automatic").tag("")
+                        ForEach(session.folders, id: \.id) { folder in
+                            Text(folder.name).tag(folder.id)
+                        }
+                    }
+                    .tint(.textBody)
+                }
+            }
+        }
+        SectionHeading(title: "Sender rules")
+        SettingsCard {
+            if swipe.rules.isEmpty {
+                Text(
+                    "After you file a message by swiping, you can choose to file that sender's new mail automatically. Those senders appear here."
+                )
+                .dsFont(.sm)
+                .foregroundStyle(.textMuted)
+                .padding(Space.s4)
+            }
+            ForEach(swipe.rules, id: \.sender) { rule in
+                HStack(spacing: Space.s3) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(session.name(for: rule.sender)).dsFont(.md).foregroundStyle(.textBody).lineLimit(1)
+                        HStack(spacing: 4) {
+                            Icon.folder.image(12)
+                            Text(ruleFolder(rule)).lineLimit(1)
+                        }
+                        .dsFont(.sm)
+                        .foregroundStyle(.textMuted)
+                    }
+                    Spacer(minLength: 0)
+                    ConfirmTrashButton(label: "Stop filing mail from \(rule.sender)", size: .sm) {
+                        Task { await session.removeFilingRule(rule.sender) }
+                    }
+                }
+                .padding(.vertical, Space.s2)
+                .padding(.horizontal, Space.s4)
+            }
+        }
+    }
+
+    private func slotDetail(_ slot: Int, filled: [FolderDef?]) -> String {
+        if session.swipeFiling.isPinned(slot, among: session.folders) { return "Always this folder." }
+        guard slot < filled.count, let folder = filled[slot] else {
+            return "Empty until you add another folder."
+        }
+        return "Automatic: \(folder.name)."
+    }
+
+    private func ruleFolder(_ rule: FilingRule) -> String {
+        session.folders.contains { $0.id == rule.folderID }
+            ? session.folderName(rule.folderID) : "A deleted folder. Nothing is filed until you remove this."
     }
 }
 

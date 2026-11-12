@@ -300,15 +300,27 @@ final class AppModel {
     }
 
     /// `mail.example.org`, or a pasted `https://mail.example.org/`, as the host's base URL.
+    /// Debug builds also take `http://` to this machine, for a dmcnd running locally in dev mode.
     static func hostURL(_ input: String) -> URL? {
         var text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         if !text.contains("://") { text = "https://" + text }
-        guard let url = URL(string: text), url.scheme == "https", var host = url.host(percentEncoded: true),
-            !host.isEmpty
+        // Both lowercased: neither cares about case, and `HTTP://LOCALHOST` is still this machine.
+        guard let url = URL(string: text), let scheme = url.scheme?.lowercased(),
+            var host = url.host(percentEncoded: true)?.lowercased(), !host.isEmpty,
+            scheme == "https" || (scheme == "http" && allowsPlainHTTP(to: host))
         else { return nil }
         // An IPv6 literal comes back from host() without its brackets, and the URL needs them.
         if host.contains(":"), !host.hasPrefix("[") { host = "[\(host)]" }
-        return URL(string: "https://\(host)\(url.port.map { ":\($0)" } ?? "")/")
+        return URL(string: "\(scheme)://\(host)\(url.port.map { ":\($0)" } ?? "")/")
+    }
+
+    /// Plain HTTP never leaves this machine, and never ships: a release build always says no.
+    private static func allowsPlainHTTP(to host: String) -> Bool {
+        #if DEBUG
+            ["localhost", "127.0.0.1", "::1"].contains(host)
+        #else
+            false
+        #endif
     }
 }
 

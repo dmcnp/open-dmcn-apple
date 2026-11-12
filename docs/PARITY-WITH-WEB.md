@@ -35,6 +35,7 @@ hand-built ones. Text follows Dynamic Type, which the web can't. The reader has 
 | Compose, reply, reply all, attachments, drafts, signature | Yes | Yes |
 | Recipient review, key-change warnings, add to contacts | Yes | Yes |
 | Forward | No | Yes, an addition |
+| Swipe to file, sender rules | No | Yes, an addition. The rules sync, but only the app applies them: mail that arrives while only the web is open stays in the Inbox until the app next checks |
 | Rich text composing | Yes | No: plain text only, and drafts resume as plain text |
 | Contacts, pins | Yes | Yes |
 | Contacts' pin-disagreement alert | Yes | Kit only, no icon yet |

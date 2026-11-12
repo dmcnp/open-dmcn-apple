@@ -408,10 +408,25 @@ private func signedIn(_ model: AppModel) throws -> MailSession {
         #expect(AppModel.hostURL(input)?.absoluteString == expected)
     }
 
-    @Test(arguments: ["http://mail.example.org", "https://", "not a host"])
+    @Test(arguments: [
+        "http://mail.example.org", "https://", "not a host",
+        "http://192.168.1.5:18099", "http://localhost.evil.example",
+    ])
     @MainActor func refusesAnythingElse(input: String) {
         #expect(AppModel.hostURL(input) == nil)
     }
+
+    #if DEBUG
+        @Test(arguments: [
+            ("http://localhost:18099", "http://localhost:18099/"),
+            ("HTTP://LOCALHOST:18099/inbox", "http://localhost:18099/"),
+            ("http://127.0.0.1:18099", "http://127.0.0.1:18099/"),
+            ("http://[::1]:18099", "http://[::1]:18099/"),
+        ])
+        @MainActor func debugTakesPlainHTTPToThisMachine(input: String, expected: String) {
+            #expect(AppModel.hostURL(input)?.absoluteString == expected)
+        }
+    #endif
 }
 
 @Suite struct PassphraseStrengthMeter {

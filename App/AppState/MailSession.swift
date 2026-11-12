@@ -151,6 +151,7 @@ final class MailSession {
         storageUsage = usageResult
         storageIsLocalOnly = localOnly
         rebuild()
+        applyFilingRules()
         await resolveKinds()
         await sweepTrash()
         await updateSearch()
@@ -177,6 +178,9 @@ final class MailSession {
                 },
                 flagsReady: flagsReady, labelsReady: labelsReady, filterReady: filterReady, mailLoaded: mailLoaded,
                 sentLoaded: sentLoaded, keepDays: trashDays, locked: isLocked, listFailed: loadFailed))
+        // DEV NOTE (future): this counts unread mail filed in folders too, as the web does. With swipe
+        // rules filing mail away, the Inbox badge keeps counting it. Decide whether the badge should
+        // count only what's actually in the Inbox (MailView.countUnread is shared with the switcher).
         unreadCount =
             flagsReady && filterReady
             ? MailView.countUnread(messages, address: address, flags: flags, filter: filter) : 0
@@ -348,6 +352,149 @@ final class MailSession {
             await deleteForever(item.hash)
             purging.remove(item.hash)
         }
+    }
+
+    // MARK: Swipe to file
+
+    /// Filing by swipe asks first: this message alone, or the sender's mail now and from now on.
+    /// Nothing moves until the owner answers.
+    struct FilingOffer: Identifiable, Equatable {
+        let id = UUID()
+        let sender: String
+        let senderName: String
+        /// Nil is back to the Inbox, which ends the sender's rule: the Inbox is where unsorted mail
+        /// lands anyway.
+        let folderID: String?
+        let folderName: String
+        /// The swiped message (every copy of it).
+        let hashes: [String]
+        /// The sender's other mail that moves too if the owner says always.
+        let others: [String]
+
+        var toInbox: Bool { folderID == nil }
+
+        var title: String {
+            toInbox
+                ? "Move mail from \(senderName) back to the Inbox?"
+                : "Move mail from \(senderName) to \(folderName)?"
+        }
+
+        var answer: String { toInbox ? "Always use the Inbox" : "Always move to \(folderName)" }
+
+        var summary: String {
+            let later =
+                toInbox
+                ? "new mail from \(senderName) will arrive in the Inbox again."
+                : "new mail from \(senderName) will go there automatically."
+            switch others.count {
+            case 0: return "From now on, \(later)"
+            case 1: return "1 other message from \(senderName) will move there now, and \(later)"
+            default: return "\(others.count) other messages from \(senderName) will move there now, and \(later)"
+            }
+        }
+    }
+
+    private(set) var filingOffer: FilingOffer?
+
+    var swipeFiling: SwipeFiling { settings.swipeFiling }
+    /// The folders the swipe offers, in slot order.
+    var swipeFolders: [FolderDef] { settings.swipeFiling.slots(folders) }
+    /// The swipe goes where mail is waiting to be sorted: the Inbox and the folders.
+    var canSwipeToFile: Bool {
+        guard swipeFiling.count > 0, !folders.isEmpty else { return false }
+        switch folder {
+        case .inbox, .folder: return true
+        default: return false
+        }
+    }
+
+    func folderName(_ id: String) -> String {
+        folders.first { $0.id == id }?.name ?? "a folder"
+    }
+
+    private var placeContext: PlaceContext {
+        PlaceContext(address: address, flags: flags, filter: filter, knownFolderIDs: Set(folders.map(\.id)))
+    }
+
+    /// Files the row in a folder, or back in the Inbox with nil. Asks first whether the rest of the
+    /// sender's mail should follow, and moves nothing until answered. Files straight away when
+    /// there's nothing to ask: a sender filing can't follow, one a rule already files there, or (for
+    /// the Inbox) no rule and nothing else to move.
+    func file(_ row: MailRow, in folderID: String?) {
+        guard let message = messages.first(where: { $0.hash == row.id }) else { return }
+        let others = MailView.sameSenderMail(as: message, into: folderID, among: messages, placeContext)
+            .filter { !row.hashes.contains($0) }
+        guard let sender = MailView.filingSender(message) else { return move(row.hashes, to: folderID) }
+        let rule = swipeFiling.rule(for: sender)
+        if let folderID, rule?.folderID == folderID { return move(row.hashes, to: folderID) }
+        if folderID == nil, rule == nil, others.isEmpty { return move(row.hashes, to: folderID) }
+        filingOffer = FilingOffer(
+            sender: sender, senderName: name(for: sender), folderID: folderID,
+            folderName: folderID.map(folderName) ?? "the Inbox", hashes: row.hashes, others: others)
+    }
+
+    /// Always: this message and the sender's other mail move now, and from here on their new mail is
+    /// filed there by a rule, or, for the Inbox, simply isn't filed any more. Takes the offer it
+    /// answers, because the dialog closing clears `filingOffer` before this runs.
+    func acceptFilingOffer(_ offer: FilingOffer) async {
+        if filingOffer == offer { filingOffer = nil }
+        move(offer.hashes + offer.others, to: offer.folderID)
+        let (sender, now) = (offer.sender, Date())
+        if let folderID = offer.folderID {
+            _ = await change { $0.swipeFiling.setRule(sender: sender, folderID: folderID, now: now) }
+        } else {
+            await removeFilingRule(sender)
+        }
+    }
+
+    /// Just this one: the swiped message moves, nothing else does, and no rule is made.
+    func fileOnlyThis(_ offer: FilingOffer) {
+        if filingOffer == offer { filingOffer = nil }
+        move(offer.hashes, to: offer.folderID)
+    }
+
+    /// Cancel, or the question went away: nothing moves.
+    func dismissFilingOffer() {
+        filingOffer = nil
+    }
+
+    private func move(_ hashes: [String], to folderID: String?) {
+        let delta = FlagDelta(folderId: folderID.map { .set($0) } ?? .clear)
+        for hash in hashes { setFlag(hash, delta) }
+    }
+
+    /// Ordinary email in a folder from someone who isn't a contact: filed by its address alone,
+    /// which nothing checked, so the row says so.
+    ///
+    /// DEV NOTE (low priority, first pass): this marks every such row in a folder, whether a rule or
+    /// the owner filed it, and a contact's mail never. A better mark would read the bridge's
+    /// SPF/DKIM/DMARC verdict (`BridgeAttestation`, in the encrypted body) and warn only when the
+    /// checks failed or are missing. See the dev note on `MailView.filingSender`.
+    func filedByAddressOnly(_ row: MailRow) -> Bool {
+        guard case .folder = folder else { return false }
+        return row.kind == .legacy && row.isNewSender
+    }
+
+    /// Files new mail the rules cover. Only once every source has answered: with flags missing,
+    /// mail the owner already moved back would look untouched.
+    private func applyFilingRules() {
+        guard flagsReady, labelsReady, filterReady, mailLoaded, settingsLoaded else { return }
+        for item in MailView.autoFiling(messages, rules: swipeFiling.rules, placeContext) {
+            setFlag(item.hash, FlagDelta(folderId: .set(item.folderID)))
+        }
+    }
+
+    func setSwipeCount(_ count: Int) async {
+        _ = await change { $0.swipeFiling.count = count }
+    }
+
+    /// Pins a folder to a slot, or makes the slot automatic again with nil.
+    func pinSwipeSlot(_ slot: Int, to folderID: String?) async {
+        _ = await change { $0.swipeFiling.pin(folderID, at: slot) }
+    }
+
+    func removeFilingRule(_ sender: String) async {
+        _ = await change { $0.swipeFiling.removeRule(sender: sender) }
     }
 
     // MARK: Composing
