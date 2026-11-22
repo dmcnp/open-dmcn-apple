@@ -374,6 +374,9 @@ final class MailSession {
         /// lands anyway.
         let folderID: String?
         let folderName: String
+        /// Where the message is now ("the Inbox", or a folder's name): the sender's other mail comes
+        /// only from there.
+        let fromName: String
         /// The swiped message (every copy of it).
         let hashes: [String]
         /// The sender's other mail that moves too if the owner says always.
@@ -394,10 +397,11 @@ final class MailSession {
                 toInbox
                 ? "new mail from \(senderName) will arrive in the Inbox again."
                 : "new mail from \(senderName) will go there automatically."
+            let there = "from \(senderName) in \(fromName)"
             switch others.count {
             case 0: return "From now on, \(later)"
-            case 1: return "1 other message from \(senderName) will move there now, and \(later)"
-            default: return "\(others.count) other messages from \(senderName) will move there now, and \(later)"
+            case 1: return "1 other message \(there) will move there now, and \(later)"
+            default: return "\(others.count) other messages \(there) will move there now, and \(later)"
             }
         }
     }
@@ -459,17 +463,20 @@ final class MailSession {
     /// one a rule already files there, or (for the Inbox) no rule and nothing else to move.
     func file(_ target: FilingTarget, in folderID: String?) {
         guard swipeFiling.asksAboutSender, let message = messages.first(where: { $0.hash == target.id }) else {
-            return move(target.hashes, to: folderID)
+            return moveWithUndo(target.hashes, to: folderID)
         }
         let others = MailView.sameSenderMail(as: message, into: folderID, among: messages, placeContext)
             .filter { !target.hashes.contains($0) }
-        guard let sender = MailView.filingSender(message) else { return move(target.hashes, to: folderID) }
+        guard let sender = MailView.filingSender(message) else { return moveWithUndo(target.hashes, to: folderID) }
         let rule = swipeFiling.rule(for: sender)
-        if let folderID, rule?.folderID == folderID { return move(target.hashes, to: folderID) }
-        if folderID == nil, rule == nil, others.isEmpty { return move(target.hashes, to: folderID) }
+        if let folderID, rule?.folderID == folderID { return moveWithUndo(target.hashes, to: folderID) }
+        if folderID == nil, rule == nil, others.isEmpty { return moveWithUndo(target.hashes, to: folderID) }
+        let from = MailView.placeOf(message, placeContext)
         filingOffer = FilingOffer(
             sender: sender, senderName: name(for: sender), folderID: folderID,
-            folderName: folderID.map(folderName) ?? "the Inbox", hashes: target.hashes, others: others)
+            folderName: folderID.map(folderName) ?? "the Inbox",
+            fromName: from.map { $0 == .inbox ? "the Inbox" : placeName($0) } ?? "the Inbox",
+            hashes: target.hashes, others: others)
     }
 
     /// A folder made from the picker, with the message filed in it straight after.
@@ -482,7 +489,8 @@ final class MailSession {
     /// answers, because the dialog closing clears `filingOffer` before this runs.
     func acceptFilingOffer(_ offer: FilingOffer) async {
         if filingOffer == offer { filingOffer = nil }
-        move(offer.hashes + offer.others, to: offer.folderID)
+        let before = UndoNotice.RuleUndo(sender: offer.sender, before: swipeFiling.rule(for: offer.sender))
+        moveWithUndo(offer.hashes + offer.others, to: offer.folderID, count: offer.others.count + 1, rule: before)
         let (sender, now) = (offer.sender, Date())
         if let folderID = offer.folderID {
             _ = await change { $0.swipeFiling.setRule(sender: sender, folderID: folderID, now: now) }
@@ -494,12 +502,34 @@ final class MailSession {
     /// Just this one: the swiped message moves, nothing else does, and no rule is made.
     func fileOnlyThis(_ offer: FilingOffer) {
         if filingOffer == offer { filingOffer = nil }
-        move(offer.hashes, to: offer.folderID)
+        moveWithUndo(offer.hashes, to: offer.folderID)
     }
 
     /// Cancel, or the question went away: nothing moves.
     func dismissFilingOffer() {
         filingOffer = nil
+    }
+
+    /// Moves by hand, with Undo: each message goes back to where it was, Archive included.
+    /// `count` is how many messages the banner names; `rule` is the sender's rule before an
+    /// "always", which Undo puts back.
+    private func moveWithUndo(
+        _ hashes: [String], to folderID: String?, count: Int = 1, rule: UndoNotice.RuleUndo? = nil
+    ) {
+        let restore = Dictionary(
+            hashes.map { hash in
+                let flag = flags[hash]
+                return (
+                    hash,
+                    FlagDelta(
+                        archived: flag?.archived.map { .set($0) } ?? .clear,
+                        folderId: flag?.folderId.map { .set($0) } ?? .clear)
+                )
+            }, uniquingKeysWith: { first, _ in first })
+        move(hashes, to: folderID)
+        let place = folderID.map(folderName) ?? "the Inbox"
+        let text = count > 1 ? "Moved \(count) messages to \(place)" : "Moved to \(place)"
+        undoNotice = UndoNotice(text: text, restore: restore, rule: rule)
     }
 
     private func move(_ hashes: [String], to folderID: String?) {
@@ -531,6 +561,14 @@ final class MailSession {
         let id = UUID()
         let text: String
         let restore: [String: FlagDelta]
+        /// Filing with "always" also changed the sender's rule; Undo puts it back.
+        var rule: RuleUndo?
+
+        /// A sender's rule as it was before: nil when they had none.
+        struct RuleUndo {
+            let sender: String
+            let before: FilingRule?
+        }
 
         static func == (a: Self, b: Self) -> Bool { a.id == b.id }
     }
@@ -568,6 +606,9 @@ final class MailSession {
     func undo(_ notice: UndoNotice) {
         if undoNotice == notice { undoNotice = nil }
         for (hash, delta) in notice.restore { setFlag(hash, delta) }
+        if let rule = notice.rule {
+            Task { _ = await change { $0.swipeFiling.restoreRule(rule.before, sender: rule.sender) } }
+        }
     }
 
     /// Its time ran out, or another took its place.
@@ -792,6 +833,18 @@ final class MailSession {
 
     func deleteFolder(_ id: String) async {
         await editLabels { try await self.services.labels.deleteFolder(id: id) }
+    }
+
+    /// The folders in the order the owner dragged them into: shown at once, then saved for every
+    /// device.
+    func reorderFolders(_ ids: [String]) {
+        folders = LabelStore.reordered(folders, by: ids, id: \.id)
+        Task { await editLabels { try await self.services.labels.reorderFolders(ids) } }
+    }
+
+    func reorderLabels(_ ids: [String]) {
+        labels = LabelStore.reordered(labels, by: ids, id: \.id)
+        Task { await editLabels { try await self.services.labels.reorderLabels(ids) } }
     }
 
     @discardableResult

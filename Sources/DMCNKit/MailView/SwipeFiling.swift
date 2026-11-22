@@ -86,6 +86,13 @@ public struct SwipeFiling: JSONDocument {
         rules = next
     }
 
+    /// Puts a sender's rule back as it was, for Undo: the earlier rule with its own start time, or
+    /// none at all.
+    public mutating func restoreRule(_ rule: FilingRule?, sender: String) {
+        removeRule(sender: sender)
+        if let rule { rules.append(rule) }
+    }
+
     public mutating func removeRule(sender: String) {
         let sender = JSText.normalizedAddress(sender)
         rules = rules.filter { $0.sender != sender }
@@ -135,25 +142,21 @@ extension MailView {
     }
 
     /// The sender's other mail that filing `m` takes along, to a folder or back to the Inbox (nil):
-    /// what sits where `m` was, plus the Inbox when `m` came from a folder, less wherever it's going.
-    /// Never Archive, Deleted, Sent or another folder. Empty when the sender can't be filed by, or
-    /// `m` isn't in the Inbox or a folder.
+    /// only what sits where `m` is now. Never Archive, Deleted, Sent, or mail in any other folder or
+    /// the Inbox when `m` is in a folder. Empty when the sender can't be filed by, or `m` isn't in
+    /// the Inbox or a folder.
     public static func sameSenderMail(
         as m: MailPreview, into folderID: String?, among messages: [MailPreview], _ ctx: PlaceContext
     ) -> [String] {
         guard let sender = filingSender(m), let from = placeOf(m, ctx) else { return [] }
-        var places: Set<MailPlace> = [.inbox]
         switch from {
-        case .inbox: break
-        case .folder(let id): places.insert(.folder(id))
+        case .inbox, .folder: break
         default: return []
         }
-        places.remove(folderID.map(MailPlace.folder) ?? .inbox)
+        guard from != folderID.map(MailPlace.folder) ?? .inbox else { return [] }
         return messages.filter { other in
-            guard other.hash != m.hash, filingSender(other) == sender, let place = placeOf(other, ctx) else {
-                return false
-            }
-            return places.contains(place)
+            guard other.hash != m.hash, filingSender(other) == sender else { return false }
+            return placeOf(other, ctx) == from
         }.map(\.hash)
     }
 

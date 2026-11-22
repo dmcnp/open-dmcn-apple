@@ -178,6 +178,25 @@ public actor LabelStore {
         try await mutate { $0.folders.removeAll { $0.id == id } }
     }
 
+    /// Puts the folders in the order the owner dragged them into. Ids are matched, so a folder
+    /// another device added meanwhile isn't lost: it keeps its place after the ones named.
+    public func reorderFolders(_ ids: [String]) async throws {
+        try await mutate { $0.folders = Self.reordered($0.folders, by: ids, id: \.id) }
+    }
+
+    /// The same for labels.
+    public func reorderLabels(_ ids: [String]) async throws {
+        try await mutate { $0.labels = Self.reordered($0.labels, by: ids, id: \.id) }
+    }
+
+    /// `items` in the order of `ids`. Ids with no item are skipped; items with no id follow, in the
+    /// order they were in.
+    public static func reordered<T>(_ items: [T], by ids: [String], id: (T) -> String) -> [T] {
+        let rank = Dictionary(ids.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        let named = items.filter { rank[id($0)] != nil }.sorted { rank[id($0)]! < rank[id($1)]! }
+        return named + items.filter { rank[id($0)] == nil }
+    }
+
     private static func newID() -> String {
         Data((0..<8).map { _ in UInt8.random(in: 0...255) }).hex
     }

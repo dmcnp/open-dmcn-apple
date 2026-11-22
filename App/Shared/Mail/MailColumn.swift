@@ -208,7 +208,7 @@ private struct UndoBanner: View {
             Text(notice.text)
                 .dsFont(.md, .medium)
                 .foregroundStyle(.surfaceCard)
-                .lineLimit(1)
+                .lineLimit(2)
             Spacer(minLength: 0)
             Button {
                 session.undo(notice)

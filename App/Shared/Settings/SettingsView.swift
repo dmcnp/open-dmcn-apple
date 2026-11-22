@@ -302,18 +302,23 @@ private struct OrganiseTab: View {
 
     var body: some View {
         SectionHeading(title: "Labels")
+        Text("Press and hold a label or folder to drag it into a new order. The order is saved with your account.")
+            .dsFont(.sm)
+            .foregroundStyle(.textMuted)
         SettingsCard {
-            ForEach(session.labels, id: \.id) { label in
-                HStack(spacing: Space.s3) {
-                    Circle().fill(LabelColor.color(label.color)).frame(width: 12, height: 12)
-                    Text(label.name).dsFont(.md).foregroundStyle(.textBody)
-                    Spacer(minLength: 0)
-                    ConfirmTrashButton(label: "Delete label \(label.name)", size: .sm) {
-                        Task { await session.deleteLabel(label.id) }
+            ReorderableRows(ids: session.labels.map(\.id), onReorder: session.reorderLabels) { id in
+                if let label = session.labels.first(where: { $0.id == id }) {
+                    HStack(spacing: Space.s3) {
+                        Circle().fill(LabelColor.color(label.color)).frame(width: 12, height: 12)
+                        Text(label.name).dsFont(.md).foregroundStyle(.textBody)
+                        Spacer(minLength: 0)
+                        ConfirmTrashButton(label: "Delete label \(label.name)", size: .sm) {
+                            Task { await session.deleteLabel(label.id) }
+                        }
                     }
+                    .padding(.vertical, Space.s2)
+                    .padding(.horizontal, Space.s4)
                 }
-                .padding(.vertical, Space.s2)
-                .padding(.horizontal, Space.s4)
             }
             VStack(alignment: .leading, spacing: Space.s2) {
                 DSTextField(placeholder: "New label name", text: $newLabel)
@@ -329,17 +334,19 @@ private struct OrganiseTab: View {
         }
         SectionHeading(title: "Folders")
         SettingsCard {
-            ForEach(session.folders, id: \.id) { folder in
-                HStack(spacing: Space.s3) {
-                    Icon.folder.image(16).foregroundStyle(.textMuted)
-                    Text(folder.name).dsFont(.md).foregroundStyle(.textBody)
-                    Spacer(minLength: 0)
-                    ConfirmTrashButton(label: "Delete folder \(folder.name)", size: .sm) {
-                        Task { await session.deleteFolder(folder.id) }
+            ReorderableRows(ids: session.folders.map(\.id), onReorder: session.reorderFolders) { id in
+                if let folder = session.folders.first(where: { $0.id == id }) {
+                    HStack(spacing: Space.s3) {
+                        Icon.folder.image(16).foregroundStyle(.textMuted)
+                        Text(folder.name).dsFont(.md).foregroundStyle(.textBody)
+                        Spacer(minLength: 0)
+                        ConfirmTrashButton(label: "Delete folder \(folder.name)", size: .sm) {
+                            Task { await session.deleteFolder(folder.id) }
+                        }
                     }
+                    .padding(.vertical, Space.s2)
+                    .padding(.horizontal, Space.s4)
                 }
-                .padding(.vertical, Space.s2)
-                .padding(.horizontal, Space.s4)
             }
             VStack(alignment: .leading, spacing: Space.s2) {
                 DSTextField(placeholder: "New folder name", text: $newFolder)

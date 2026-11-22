@@ -93,6 +93,19 @@ private func folders(_ ids: String...) -> [FolderDef] {
         swipe.removeRule(sender: ada)
         #expect(swipe.rules.isEmpty)
     }
+
+    @Test func undoPutsTheEarlierRuleBackWithItsStartTime() {
+        var swipe = SwipeFiling()
+        swipe.setRule(sender: ada, folderID: "f1", now: Date(timeIntervalSince1970: 5))
+        let before = swipe.rule(for: ada)
+        swipe.setRule(sender: ada, folderID: "f2", now: Date(timeIntervalSince1970: 9))
+        swipe.restoreRule(before, sender: ada)
+        #expect(swipe.rules.count == 1)
+        #expect(swipe.rule(for: ada)?.folderID == "f1")
+        #expect(swipe.rule(for: ada)?.since == 5)
+        swipe.restoreRule(nil, sender: ada)
+        #expect(swipe.rules.isEmpty)
+    }
 }
 
 @Suite struct MoveSameSender {
@@ -109,14 +122,14 @@ private func folders(_ ids: String...) -> [FolderDef] {
         #expect(MailView.sameSenderMail(as: swiped, into: "f1", among: mail, ctx) == ["inbox"])
     }
 
-    @Test func fromAFolderThatFolderAndTheInboxComeAlong() {
+    @Test func fromAFolderOnlyThatFolderComesAlong() {
         let swiped = message("m")
         let mail = [swiped, message("inbox"), message("sameFolder"), message("otherFolder"), message("archived")]
         let ctx = context([
             "m": FlagRecord(folderId: "f1"), "sameFolder": FlagRecord(folderId: "f1"),
             "otherFolder": FlagRecord(folderId: "f2"), "archived": FlagRecord(archived: true),
         ])
-        #expect(MailView.sameSenderMail(as: swiped, into: "f2", among: mail, ctx) == ["inbox", "sameFolder"])
+        #expect(MailView.sameSenderMail(as: swiped, into: "f2", among: mail, ctx) == ["sameFolder"])
     }
 
     @Test func ordinaryEmailIsFiledByItsAddress() {
