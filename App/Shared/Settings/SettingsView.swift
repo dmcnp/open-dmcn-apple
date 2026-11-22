@@ -352,97 +352,127 @@ private struct OrganiseTab: View {
             }
             .padding(Space.s4)
         }
-        SwipeToFileSection(session: session)
+        FilingSection(session: session)
     }
 }
 
-/// How many folder buttons a right swipe shows, which folder each one holds, and the senders whose
-/// new mail is filed for you. Synced across your devices.
-private struct SwipeToFileSection: View {
+/// How filing and swiping behave, and the senders whose new mail is filed for you. Synced across
+/// your devices.
+private struct FilingSection: View {
     let session: MailSession
+    @State private var showingRules = false
 
     var body: some View {
-        let swipe = session.swipeFiling
-        let filled = swipe.assignments(session.folders)
-        SectionHeading(title: "Swipe to file")
+        let filing = session.swipeFiling
+        SectionHeading(title: "Filing and swiping")
         SettingsCard {
             SettingsRow(
-                title: "Folder buttons",
-                detail: "Swipe a message to the right to file it. Synced across your devices.",
-                stacked: true
+                title: "Ask about the sender's other mail",
+                detail:
+                    "After you move a message to a folder, ask whether the sender's other mail and new mail should go there too."
             ) {
-                Picker(
-                    "Folder buttons",
-                    selection: Binding(
-                        get: { swipe.count },
-                        set: { count in Task { await session.setSwipeCount(count) } })
-                ) {
-                    ForEach(SwipeFiling.choices, id: \.self) { count in
-                        Text(count == 0 ? "Off" : "\(count)").tag(count)
-                    }
-                }
-                .pickerStyle(.segmented)
+                DSToggle(
+                    title: "Ask about the sender's other mail",
+                    isOn: Binding(
+                        get: { filing.asksAboutSender },
+                        set: { on in Task { await session.setAsksAboutSender(on) } }))
             }
-            ForEach(0..<swipe.count, id: \.self) { slot in
-                SettingsRow(title: "Button \(slot + 1)", detail: slotDetail(slot, filled: filled)) {
-                    Picker(
-                        "Button \(slot + 1)",
-                        selection: Binding(
-                            get: { swipe.isPinned(slot, among: session.folders) ? swipe.pins[slot] : "" },
-                            set: { id in Task { await session.pinSwipeSlot(slot, to: id.isEmpty ? nil : id) } })
-                    ) {
-                        Text("Automatic").tag("")
-                        ForEach(session.folders, id: \.id) { folder in
-                            Text(folder.name).tag(folder.id)
-                        }
+            SettingsRow(
+                title: "Full swipe left archives",
+                detail: "Swiping a message all the way left archives it instead of deleting it."
+            ) {
+                DSToggle(
+                    title: "Full swipe left archives",
+                    isOn: Binding(
+                        get: { filing.fullSwipeArchives },
+                        set: { on in Task { await session.setFullSwipeArchives(on) } }))
+            }
+            SettingsRow(title: "Sender rules", detail: rulesDetail(filing.rules.count), stacked: true) {
+                DSButton("Manage sender rules", variant: .secondary, size: .sm) { showingRules = true }
+            }
+        }
+        .sheet(isPresented: $showingRules) {
+            NavigationStack { SenderRulesView(session: session) }
+        }
+    }
+
+    private func rulesDetail(_ count: Int) -> String {
+        switch count {
+        case 0: "None yet. When you move a message and choose to always move that sender's mail, it shows here."
+        case 1: "1 sender's new mail goes straight to a folder."
+        default: "\(count) senders' new mail goes straight to a folder."
+        }
+    }
+}
+
+/// The rules under their folders: tap a folder to see its senders, each with a way to stop.
+private struct SenderRulesView: View {
+    let session: MailSession
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let groups = session.swipeFiling.rulesByFolder(session.folders)
+        List {
+            if groups.isEmpty {
+                Text("No sender rules yet.").dsFont(.sm).foregroundStyle(.textMuted)
+            }
+            ForEach(groups, id: \.folder?.id) { group in
+                NavigationLink {
+                    FolderRulesView(session: session, folderID: group.folder?.id)
+                } label: {
+                    HStack(spacing: Space.s3) {
+                        Icon.folder.image(16).foregroundStyle(.textMuted)
+                        Text(group.folder?.name ?? "Deleted folders").dsFont(.md).foregroundStyle(.textBody)
+                        Spacer(minLength: 0)
+                        Text("\(group.rules.count)").dsFont(.sm).foregroundStyle(.textMuted)
                     }
-                    .tint(.textBody)
                 }
             }
         }
-        SectionHeading(title: "Sender rules")
-        SettingsCard {
-            if swipe.rules.isEmpty {
+        .navigationTitle("Sender rules")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
+    }
+}
+
+/// One folder's senders. Removing one stops filing their new mail; nothing already filed moves.
+private struct FolderRulesView: View {
+    let session: MailSession
+    /// Nil is the rules whose folder was deleted.
+    let folderID: String?
+
+    var body: some View {
+        let group = session.swipeFiling.rulesByFolder(session.folders).first { $0.folder?.id == folderID }
+        List {
+            Section {
+                ForEach(group?.rules ?? [], id: \.sender) { rule in
+                    HStack(spacing: Space.s3) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(session.name(for: rule.sender)).dsFont(.md).foregroundStyle(.textBody).lineLimit(1)
+                            if session.name(for: rule.sender) != rule.sender {
+                                Text(rule.sender).dsFont(.sm).foregroundStyle(.textMuted).lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        ConfirmTrashButton(label: "Stop filing mail from \(rule.sender)", size: .sm) {
+                            Task { await session.removeFilingRule(rule.sender) }
+                        }
+                    }
+                }
+            } footer: {
                 Text(
-                    "After you file a message by swiping, you can choose to file that sender's new mail automatically. Those senders appear here."
+                    folderID == nil
+                        ? "These folders were deleted, so nothing is filed for these senders. Removing them tidies up."
+                        : "Removing a sender stops filing their new mail here. Mail already here stays."
                 )
-                .dsFont(.sm)
-                .foregroundStyle(.textMuted)
-                .padding(Space.s4)
-            }
-            ForEach(swipe.rules, id: \.sender) { rule in
-                HStack(spacing: Space.s3) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(session.name(for: rule.sender)).dsFont(.md).foregroundStyle(.textBody).lineLimit(1)
-                        HStack(spacing: 4) {
-                            Icon.folder.image(12)
-                            Text(ruleFolder(rule)).lineLimit(1)
-                        }
-                        .dsFont(.sm)
-                        .foregroundStyle(.textMuted)
-                    }
-                    Spacer(minLength: 0)
-                    ConfirmTrashButton(label: "Stop filing mail from \(rule.sender)", size: .sm) {
-                        Task { await session.removeFilingRule(rule.sender) }
-                    }
-                }
-                .padding(.vertical, Space.s2)
-                .padding(.horizontal, Space.s4)
             }
         }
-    }
-
-    private func slotDetail(_ slot: Int, filled: [FolderDef?]) -> String {
-        if session.swipeFiling.isPinned(slot, among: session.folders) { return "Always this folder." }
-        guard slot < filled.count, let folder = filled[slot] else {
-            return "Empty until you add another folder."
-        }
-        return "Automatic: \(folder.name)."
-    }
-
-    private func ruleFolder(_ rule: FilingRule) -> String {
-        session.folders.contains { $0.id == rule.folderID }
-            ? session.folderName(rule.folderID) : "A deleted folder. Nothing is filed until you remove this."
+        .navigationTitle(group?.folder?.name ?? "Deleted folders")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

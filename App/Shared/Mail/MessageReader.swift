@@ -9,9 +9,10 @@ struct MessageReader: View {
     @State private var confirmingHTML = false
     @State private var creating: CreateKind?
     @State private var saving: FileDocumentData?
+    @State private var folderFor: MailSession.FilingTarget?
 
     enum CreateKind: Identifiable {
-        case label, folder
+        case label
         var id: Self { self }
     }
 
@@ -53,14 +54,11 @@ struct MessageReader: View {
         .task { await reader.load() }
         .sheet(item: $creating) { kind in
             CreateTagSheet(kind: kind) { name, color in
-                if kind == .label {
-                    await reader.createLabel(name: name, color: color)
-                } else {
-                    await reader.createFolder(name: name)
-                }
+                await reader.createLabel(name: name, color: color)
             }
             .presentationDetents([.height(260)])
         }
+        .modifier(FilingSheets(session: session, folderFor: $folderFor, labelFor: .constant(nil)))
     }
 
     /// The system back-swipe doesn't exist here: the reader replaces the list in place, as on the
@@ -83,7 +81,9 @@ struct MessageReader: View {
                 ConfirmTrashButton(label: "Delete forever") { reader.delete() }
             } else {
                 labelMenu
-                folderMenu
+                if reader.place != nil {
+                    DSIconButton(.folder, label: "Move to folder") { folderFor = reader.filingTarget }
+                }
                 Rectangle().fill(.borderDefault).frame(width: 1, height: 20).padding(.horizontal, 6)
                 DSIconButton(
                     reader.isStarred ? .starFill : .star, label: reader.isStarred ? "Unstar" : "Star",
@@ -113,19 +113,6 @@ struct MessageReader: View {
             Icon.tag.image(18).foregroundStyle(.textMuted).frame(width: 38, height: 38).contentShape(Rectangle())
         }
         .accessibilityLabel("Add label")
-    }
-
-    private var folderMenu: some View {
-        Menu {
-            Button("No folder") { reader.setFolder(nil) }
-            ForEach(reader.folders, id: \.id) { folder in
-                Button(folder.name) { reader.setFolder(folder.id) }
-            }
-            Button("New folder…") { creating = .folder }
-        } label: {
-            Icon.folder.image(18).foregroundStyle(.textMuted).frame(width: 38, height: 38).contentShape(Rectangle())
-        }
-        .accessibilityLabel("Move to folder")
     }
 
     // MARK: Header
@@ -173,11 +160,29 @@ struct MessageReader: View {
         Text(text).dsFont(.sm).foregroundStyle(.textMuted).lineLimit(1)
     }
 
+    /// Where the message lives, as a button that moves it, then its labels.
     @ViewBuilder private var filing: some View {
-        if reader.currentFolder != nil || !reader.appliedLabels.isEmpty {
+        if reader.place != nil || !reader.appliedLabels.isEmpty {
             FlowRow {
-                if let folder = reader.currentFolder {
-                    DSTag(folder.name, onRemove: { reader.setFolder(nil) }) { Icon.folder.image(12) }
+                if let place = reader.place, let name = reader.placeName {
+                    Button {
+                        folderFor = reader.filingTarget
+                    } label: {
+                        HStack(spacing: 5) {
+                            placeIcon(place).image(13)
+                            Text(name).lineLimit(1)
+                            Icon.chevronDown.image(12)
+                        }
+                        .dsFont(.sm, .medium)
+                        .foregroundStyle(.textBody)
+                        .padding(.horizontal, 10)
+                        .frame(height: 28)
+                        .background(.surfaceCard)
+                        .dsBorder(.borderDefault)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("In \(name). Move to another folder")
                 }
                 ForEach(reader.appliedLabels, id: \.id) { label in
                     DSTag(label.name, onRemove: { reader.removeLabel(label.id) }) {
@@ -185,6 +190,14 @@ struct MessageReader: View {
                     }
                 }
             }
+        }
+    }
+
+    private func placeIcon(_ place: MailPlace) -> Icon {
+        switch place {
+        case .inbox: .inbox
+        case .archive: .archive
+        default: .folder
         }
     }
 

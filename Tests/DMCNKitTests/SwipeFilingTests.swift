@@ -24,81 +24,62 @@ private func folders(_ ids: String...) -> [FolderDef] {
     ids.map { FolderDef(id: $0, name: $0.uppercased()) }
 }
 
-@Suite struct SwipeSlots {
-    @Test func fourAutomaticSlotsByDefault() {
-        let swipe = SwipeFiling()
-        #expect(swipe.count == 4)
-        #expect(swipe.slots(folders("a", "b", "c", "d", "e")).map(\.id) == ["a", "b", "c", "d"])
-    }
-
-    @Test func fewerFoldersThanSlotsShowsWhatThereIsAndANewFolderFillsIn() {
-        let swipe = SwipeFiling()
-        #expect(swipe.slots(folders("a", "b")).map(\.id) == ["a", "b"])
-        #expect(swipe.slots(folders("a", "b", "c")).map(\.id) == ["a", "b", "c"])
-    }
-
-    @Test func aSmallerCountStaysSmallWhenFoldersAreAdded() {
-        var swipe = SwipeFiling()
-        swipe.count = 2
-        #expect(swipe.slots(folders("a")).map(\.id) == ["a"])
-        #expect(swipe.slots(folders("a", "b", "c")).map(\.id) == ["a", "b"])
-    }
-
-    @Test func offShowsNothing() {
-        var swipe = SwipeFiling()
-        swipe.count = 0
-        #expect(swipe.slots(folders("a", "b")).isEmpty)
-    }
-
-    @Test func aPinnedFolderKeepsItsSlotAndTheRestFillAroundIt() {
-        var swipe = SwipeFiling()
-        swipe.count = 3
-        swipe.pin("d", at: 1)
-        #expect(swipe.slots(folders("a", "b", "c", "d")).map(\.id) == ["a", "d", "b"])
-    }
-
-    @Test func aDeletedPinnedFolderHandsItsSlotBack() {
-        var swipe = SwipeFiling()
-        swipe.count = 2
-        swipe.pin("gone", at: 0)
-        #expect(swipe.slots(folders("a", "b")).map(\.id) == ["a", "b"])
-    }
-
-    @Test func theSameFolderPinnedTwiceIsOfferedOnce() {
-        var swipe = SwipeFiling()
-        swipe.count = 3
-        swipe.pin("a", at: 0)
-        swipe.pin("a", at: 2)
-        #expect(swipe.slots(folders("a", "b", "c")).map(\.id) == ["a", "b", "c"])
-    }
-
-    @Test func assignmentsKeepEmptySlotsInPlace() {
-        var swipe = SwipeFiling()
-        swipe.count = 3
-        swipe.pin("b", at: 2)
-        #expect(swipe.assignments(folders("a", "b")).map { $0?.id } == ["a", nil, "b"])
-        #expect(swipe.isPinned(2, among: folders("a", "b")))
-        #expect(!swipe.isPinned(0, among: folders("a", "b")))
-        #expect(!swipe.isPinned(2, among: folders("a")))
-    }
-
-    @Test func aCountNotOnOfferReadsAsTheDefault() {
-        let swipe = SwipeFiling(fields: ["count": .int(7)])
-        #expect(swipe.count == SwipeFiling.defaultCount)
+@Suite struct FilingSettings {
+    @Test func askingIsOnAndFullSwipeDeletesUntilChanged() {
+        let filing = SwipeFiling()
+        #expect(filing.asksAboutSender)
+        #expect(!filing.fullSwipeArchives)
     }
 
     @Test func itRoundTripsThroughTheSettingsAndLeavesOtherFieldsAlone() {
         var settings = AppSettings(fields: ["signature": .string("Cheers")])
-        var swipe = settings.swipeFiling
-        swipe.count = 3
-        swipe.pin("b", at: 0)
-        swipe.setRule(sender: "Ada@Example.com ", folderID: "f1", now: Date(timeIntervalSince1970: 50))
-        settings.swipeFiling = swipe
+        var filing = settings.swipeFiling
+        filing.asksAboutSender = false
+        filing.fullSwipeArchives = true
+        filing.setRule(sender: "Ada@Example.com ", folderID: "f1", now: Date(timeIntervalSince1970: 50))
+        settings.swipeFiling = filing
         #expect(settings.signature == "Cheers")
-        #expect(settings.swipeFiling.count == 3)
-        #expect(settings.swipeFiling.pins == ["b"])
+        #expect(!settings.swipeFiling.asksAboutSender)
+        #expect(settings.swipeFiling.fullSwipeArchives)
         #expect(settings.swipeFiling.rule(for: ada)?.folderID == "f1")
         #expect(settings.swipeFiling.rule(for: ada)?.since == 50)
+    }
+
+    @Test func rulesSortUnderTheirFoldersAndAGoneFolderComesLast() {
+        var filing = SwipeFiling()
+        filing.setRule(sender: "zed@example.com", folderID: "f1", now: Date())
+        filing.setRule(sender: "bob@example.com", folderID: "f2", now: Date())
+        filing.setRule(sender: "amy@example.com", folderID: "f1", now: Date())
+        filing.setRule(sender: "old@example.com", folderID: "gone", now: Date())
+        let groups = filing.rulesByFolder(folders("f1", "f2", "f3"))
+        #expect(groups.map { $0.folder?.id } == ["f1", "f2", nil])
+        #expect(groups[0].rules.map(\.sender) == ["amy@example.com", "zed@example.com"])
+        #expect(groups[2].rules.map(\.sender) == ["old@example.com"])
+    }
+}
+
+@Suite struct FilingPlacement {
+    @Test func backToTheInboxFromAFolderClearsAnArchivedMark() {
+        let m = message("m")
+        let ctx = context(["m": FlagRecord(archived: true, folderId: "f1")])
+        #expect(MailView.placeOf(m, ctx) == .folder("f1"))
+        let delta = MailView.filingDelta(to: nil)
+        let after = FlagRecord(
+            archived: delta.archived.applied(to: true), folderId: delta.folderId.applied(to: "f1"))
+        #expect(MailView.placeOf(m, context(["m": after])) == .inbox)
+    }
+
+    @Test func intoAFolderLeavesTheArchivedMarkAlone() {
+        #expect(MailView.filingDelta(to: "f1") == FlagDelta(folderId: .set("f1")))
+    }
+
+    @Test func theInboxCountLeavesOutFiledMail() {
+        let mail = [message("inbox"), message("filed"), message("goneFolder")]
+        let flags = ["filed": FlagRecord(folderId: "f1"), "goneFolder": FlagRecord(folderId: "gone")]
+        let all = MailView.countUnread(mail, address: me, flags: flags, filter: nil)
+        let inbox = MailView.countUnread(mail, address: me, flags: flags, filter: nil, filedIn: ["f1"])
+        #expect(all == 3)
+        #expect(inbox == 2)
     }
 }
 

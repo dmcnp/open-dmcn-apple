@@ -114,7 +114,15 @@ final class ReaderModel: Identifiable {
     var availableLabels: [LabelDef] {
         session.labels.filter { !(flag?.labelIds ?? []).contains($0.id) }
     }
-    var currentFolder: FolderDef? { session.folders.first { $0.id == flag?.folderId } }
+    var filingTarget: MailSession.FilingTarget { .init(hash: message.hash) }
+    /// Where the message lives, for the folder button: nil where it can't be filed (Sent, Deleted).
+    var place: MailPlace? {
+        switch session.place(of: message.hash) {
+        case .some(.sent), .some(.deleted), nil: nil
+        case let place?: place
+        }
+    }
+    var placeName: String? { place.map(session.placeName) }
     var deletedWhen: String? {
         flag?.trashedAt.map { MailView.purgeWhen($0, days: session.trashDays, now: systemClock()) }
     }
@@ -122,7 +130,7 @@ final class ReaderModel: Identifiable {
     func toggleStar() { session.toggleStar(message.hash) }
 
     func toggleArchive() {
-        session.setFlag(message.hash, FlagDelta(archived: .set(!isArchived)))
+        session.setArchived(!isArchived, [message.hash])
         session.closeMessage()
     }
 
@@ -134,16 +142,8 @@ final class ReaderModel: Identifiable {
         session.setFlag(message.hash, FlagDelta(labelIds: .set((flag?.labelIds ?? []).filter { $0 != id })))
     }
 
-    func setFolder(_ id: String?) {
-        session.setFlag(message.hash, FlagDelta(folderId: id.map { .set($0) } ?? .clear))
-    }
-
     func createLabel(name: String, color: String) async {
         if let id = await session.createLabel(name: name, color: color) { addLabel(id) }
-    }
-
-    func createFolder(name: String) async {
-        if let id = await session.createFolder(name: name) { setFolder(id) }
     }
 
     func restore() {
@@ -158,7 +158,7 @@ final class ReaderModel: Identifiable {
             let hash = message.hash
             Task { await session.deleteForever(hash) }
         } else {
-            session.trash(message.hash)
+            session.trashWithUndo([message.hash])
         }
         session.closeMessage()
     }

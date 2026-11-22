@@ -1,7 +1,8 @@
 import Foundation
 
-// Swipe to file: a right swipe on a row offers folders to file it in, and filing can become a rule
-// that files a sender's future mail. This build's own feature, with no browser counterpart. It
+// Filing: a right swipe on a row (or the folder button on an open message) picks a folder, and
+// filing can become a rule that files a sender's future mail. This build's own feature, with no
+// browser counterpart. It
 // lives in one synced settings field, "swipeFiling", which the browser keeps as it is: its settings
 // writes re-read the document and change only the fields they set (useSettings.ts).
 
@@ -33,32 +34,24 @@ public struct FilingRule: JSONDocument {
     }
 }
 
-/// The swipe's settings: how many folder buttons, which folder each slot holds, and the rules.
+/// Filing's settings: whether filing asks about the sender's other mail, what a full left swipe
+/// does, and the rules.
 public struct SwipeFiling: JSONDocument {
-    /// What Settings offers. Zero turns the swipe off.
-    public static let choices = [0, 2, 3, 4]
-    public static let defaultCount = 4
-
     public var fields: [String: JSONValue]
     public init(fields: [String: JSONValue]) { self.fields = fields }
     public init() { self.init(fields: [:]) }
 
-    /// How many folder buttons the swipe shows. Anything not on offer reads as the default.
-    public var count: Int {
-        get {
-            let n = fields.int("count").map(Int.init) ?? Self.defaultCount
-            return Self.choices.contains(n) ? n : Self.defaultCount
-        }
-        set { fields.set("count", Int64(newValue)) }
+    /// Whether filing a message asks if the sender's other mail, and their new mail, should follow.
+    /// On unless the owner turned it off: off, filing moves that one message and makes no rule.
+    public var asksAboutSender: Bool {
+        get { fields.bool("asksAboutSender") ?? true }
+        set { fields.set("asksAboutSender", newValue) }
     }
 
-    /// The folder the owner pinned to each slot, by position. An empty string is an automatic slot.
-    public var pins: [String] {
-        get {
-            guard case .array(let items)? = fields["pins"] else { return [] }
-            return items.map { if case .string(let id) = $0 { id } else { "" } }
-        }
-        set { fields["pins"] = .array(newValue.map(JSONValue.string)) }
+    /// Whether a full swipe to the left archives instead of deleting. Off unless the owner chose it.
+    public var fullSwipeArchives: Bool {
+        get { fields.bool("fullSwipeArchives") ?? false }
+        set { fields.set("fullSwipeArchives", newValue) }
     }
 
     public var rules: [FilingRule] {
@@ -66,44 +59,18 @@ public struct SwipeFiling: JSONDocument {
         set { fields.set("rules", newValue) }
     }
 
-    /// The folders the swipe offers, in slot order. A pinned slot keeps its folder while it exists.
-    /// Every other slot takes the next folder in the list that isn't already offered, so a new
-    /// folder fills an empty slot by itself, and deleting a pinned folder hands its slot back.
-    public func slots(_ folders: [FolderDef]) -> [FolderDef] {
-        assignments(folders).compactMap { $0 }
-    }
-
-    /// Each slot's folder, by position: nil where an automatic slot has no folder left to take.
-    public func assignments(_ folders: [FolderDef]) -> [FolderDef?] {
-        guard count > 0 else { return [] }
-        let byID = Dictionary(folders.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        var pinned: [FolderDef?] = []
-        var taken = Set<String>()
-        for i in 0..<count {
-            let id = i < pins.count ? pins[i] : ""
-            if !id.isEmpty, let folder = byID[id], !taken.contains(id) {
-                pinned.append(folder)
-                taken.insert(id)
-            } else {
-                pinned.append(nil)
-            }
+    /// The rules sorted under their folders, in the folder list's order, senders by address. Rules
+    /// whose folder was deleted come last, under nil: they file nothing until removed.
+    public func rulesByFolder(_ folders: [FolderDef]) -> [(folder: FolderDef?, rules: [FilingRule])] {
+        let known = Set(folders.map(\.id))
+        let sorted = rules.sorted { $0.sender < $1.sender }
+        var groups: [(folder: FolderDef?, rules: [FilingRule])] = folders.compactMap { folder in
+            let mine = sorted.filter { $0.folderID == folder.id }
+            return mine.isEmpty ? nil : (folder, mine)
         }
-        var unpinned = folders.filter { !taken.contains($0.id) }.makeIterator()
-        return pinned.map { $0 ?? unpinned.next() }
-    }
-
-    /// Whether the owner pinned a folder that still exists to this slot.
-    public func isPinned(_ slot: Int, among folders: [FolderDef]) -> Bool {
-        slot < pins.count && !pins[slot].isEmpty && folders.contains { $0.id == pins[slot] }
-    }
-
-    /// Pins `folderID` to `slot`, or makes the slot automatic again with nil.
-    public mutating func pin(_ folderID: String?, at slot: Int) {
-        guard slot >= 0, slot < Self.choices.max()! else { return }
-        var next = pins
-        while next.count <= slot { next.append("") }
-        next[slot] = folderID ?? ""
-        pins = next
+        let orphans = sorted.filter { !known.contains($0.folderID) }
+        if !orphans.isEmpty { groups.append((nil, orphans)) }
+        return groups
     }
 
     public func rule(for sender: String) -> FilingRule? {
@@ -142,6 +109,14 @@ public struct AutoFiling: Equatable, Sendable {
 }
 
 extension MailView {
+    /// What filing writes: the folder, or none for the Inbox. Back to the Inbox also clears the
+    /// archived mark, or a message that was filed and archived would land in Archive instead: a
+    /// folder outranks Archive, so the mark was hidden until the folder went.
+    public static func filingDelta(to folderID: String?) -> FlagDelta {
+        guard let folderID else { return FlagDelta(archived: .clear, folderId: .clear) }
+        return FlagDelta(folderId: .set(folderID))
+    }
+
     /// The address filing may follow: a verified DMCN sender, or ordinary email whose address simply
     /// didn't resolve, filed by that address alone. Never a header the checks caught: one claiming
     /// an address whose published key is someone else's, or an address its domain disowned.

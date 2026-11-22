@@ -35,7 +35,9 @@ hand-built ones. Text follows Dynamic Type, which the web can't. The reader has 
 | Compose, reply, reply all, attachments, drafts, signature | Yes | Yes |
 | Recipient review, key-change warnings, add to contacts | Yes | Yes |
 | Forward | No | Yes, an addition |
-| Swipe to file, sender rules | No | Yes, an addition. The rules sync, but only the app applies them: mail that arrives while only the web is open stays in the Inbox until the app next checks |
+| Swipe to file or label, sender rules | No | Yes, an addition. The rules sync, but only the app applies them: mail that arrives while only the web is open stays in the Inbox until the app next checks |
+| Undo after delete or archive | No | Yes, an addition: a short banner with Undo |
+| Inbox unread count | Counts unread mail in folders too | Counts only mail in the Inbox, so filed mail doesn't keep the number up |
 | Rich text composing | Yes | No: plain text only, and drafts resume as plain text |
 | Contacts, pins | Yes | Yes |
 | Contacts' pin-disagreement alert | Yes | Kit only, no icon yet |
