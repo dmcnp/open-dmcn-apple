@@ -198,6 +198,15 @@ private struct EdgePan: UIGestureRecognizerRepresentable {
         ) -> Bool {
             other is UIPanGestureRecognizer
         }
+
+        /// A row with its Folder and Label buttons out takes the next touch to close them. Running
+        /// alongside that, one swipe from the edge closes the row and opens the menu.
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
     }
 
     func updateUIGestureRecognizer(_ recognizer: EdgeDrag, context: Context) {

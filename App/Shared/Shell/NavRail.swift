@@ -1,6 +1,5 @@
 import DMCNKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// The rail. Everything in the scrolling part grows as the mailbox is used; what's pinned at the
 /// bottom is a small fixed set that should never scroll out of reach.
@@ -31,7 +30,9 @@ struct NavRail: View {
                     // Press and hold a folder or label to drag it into a new order.
                     if !session.folders.isEmpty {
                         GroupLabel(text: "Folders")
-                        ReorderableRows(ids: session.folders.map(\.id), onReorder: session.reorderFolders) { id in
+                        ReorderableRows(
+                            ids: session.folders.map(\.id), onReorder: session.reorderFolders
+                        ) { id in
                             if let folder = session.folders.first(where: { $0.id == id }) {
                                 folderRow(.folder, .folder(folder.id), folder.name)
                             }
@@ -39,7 +40,9 @@ struct NavRail: View {
                     }
                     if !session.labels.isEmpty {
                         GroupLabel(text: "Labels")
-                        ReorderableRows(ids: session.labels.map(\.id), onReorder: session.reorderLabels) { id in
+                        ReorderableRows(
+                            ids: session.labels.map(\.id), onReorder: session.reorderLabels
+                        ) { id in
                             if let label = session.labels.first(where: { $0.id == id }) {
                                 NavRow(
                                     swatch: LabelColor.color(label.color), label: label.name,
@@ -154,82 +157,46 @@ struct NavRow: View {
     }
 }
 
-/// Rows the owner can put in a new order: press and hold one, drag it up or down, and the others
-/// make way as it passes. The new order is handed over once the row is let go, wherever that is.
+/// Rows the owner can put in a new order with iOS's own list reorder: press and hold one until it
+/// lifts, drag it, let go. A small list of its own, sized to its rows, that never scrolls, so it sits
+/// inside the menu or a Settings card like the other rows.
 struct ReorderableRows<Row: View>: View {
     let ids: [String]
     let onReorder: ([String]) -> Void
-    @ViewBuilder let row: (String) -> Row
+    let row: (String) -> Row
 
-    /// The order while a drag is under way, nil otherwise.
-    @State private var draft: [String]?
-    @State private var dragging: String?
+    init(ids: [String], onReorder: @escaping ([String]) -> Void, @ViewBuilder row: @escaping (String) -> Row) {
+        self.ids = ids
+        self.onReorder = onReorder
+        self.row = row
+    }
+
+    /// Measured from the rows themselves, so the list is exactly as tall as they are.
+    @State private var rowHeight: CGFloat = 44
 
     var body: some View {
-        ForEach(draft ?? ids, id: \.self) { id in
-            row(id)
-                .contentShape(Rectangle())
-                .opacity(dragging == id ? 0.35 : 1)
-                .onDrag {
-                    draft = ids
-                    dragging = id
-                    return DragToken(id) { finish() }
-                } preview: {
-                    row(id).frame(width: 240).background(.surfaceCard, in: .dsCard)
-                }
-                .onDrop(
-                    of: [.text],
-                    delegate: RowDrop(target: id, draft: $draft, dragging: dragging, finish: finish))
+        List {
+            ForEach(ids, id: \.self) { id in
+                row(id)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { height in
+                        if height > 0 { rowHeight = height }
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+            .onMove { from, to in
+                var order = ids
+                order.move(fromOffsets: from, toOffset: to)
+                onReorder(order)
+            }
         }
-    }
-
-    /// Ends the drag once: a drop on a row ends it at once, a drop anywhere else when the system
-    /// lets go of the dragged item.
-    private func finish() {
-        guard dragging != nil else { return }
-        let order = draft
-        dragging = nil
-        if let order, order != ids { onReorder(order) }
-        draft = nil
-    }
-}
-
-/// What a drag carries: the row's id, and a call back for when the drag is over. The system lets
-/// go of it then, whether the row was dropped on a row or not.
-private final class DragToken: NSItemProvider, @unchecked Sendable {
-    private let onEnd: @MainActor () -> Void
-
-    init(_ id: String, onEnd: @escaping @MainActor () -> Void) {
-        self.onEnd = onEnd
-        super.init()
-        registerObject(id as NSString, visibility: .ownProcess)
-    }
-
-    deinit {
-        let onEnd = onEnd
-        Task { @MainActor in onEnd() }
-    }
-}
-
-/// A row the dragged row passes over: the dragged row takes its place, and the rest shift.
-private struct RowDrop: DropDelegate {
-    let target: String
-    @Binding var draft: [String]?
-    let dragging: String?
-    let finish: () -> Void
-
-    func dropEntered(info: DropInfo) {
-        guard let dragging, dragging != target, var order = draft,
-            let from = order.firstIndex(of: dragging), let to = order.firstIndex(of: target)
-        else { return }
-        order.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
-        withAnimation(Motion.normal) { draft = order }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
-
-    func performDrop(info: DropInfo) -> Bool {
-        finish()
-        return true
+        .listStyle(.plain)
+        .scrollDisabled(true)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+        .frame(height: rowHeight * CGFloat(ids.count))
     }
 }

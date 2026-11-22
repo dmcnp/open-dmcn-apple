@@ -306,7 +306,9 @@ private struct OrganiseTab: View {
             .dsFont(.sm)
             .foregroundStyle(.textMuted)
         SettingsCard {
-            ReorderableRows(ids: session.labels.map(\.id), onReorder: session.reorderLabels) { id in
+            ReorderableRows(
+                ids: session.labels.map(\.id), onReorder: session.reorderLabels
+            ) { id in
                 if let label = session.labels.first(where: { $0.id == id }) {
                     HStack(spacing: Space.s3) {
                         Circle().fill(LabelColor.color(label.color)).frame(width: 12, height: 12)
@@ -334,7 +336,9 @@ private struct OrganiseTab: View {
         }
         SectionHeading(title: "Folders")
         SettingsCard {
-            ReorderableRows(ids: session.folders.map(\.id), onReorder: session.reorderFolders) { id in
+            ReorderableRows(
+                ids: session.folders.map(\.id), onReorder: session.reorderFolders
+            ) { id in
                 if let folder = session.folders.first(where: { $0.id == id }) {
                     HStack(spacing: Space.s3) {
                         Icon.folder.image(16).foregroundStyle(.textMuted)
