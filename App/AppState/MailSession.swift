@@ -151,6 +151,7 @@ final class MailSession {
         storageUsage = usageResult
         storageIsLocalOnly = localOnly
         rebuild()
+        applyFilingRules()
         await resolveKinds()
         await sweepTrash()
         await updateSearch()
@@ -177,9 +178,12 @@ final class MailSession {
                 },
                 flagsReady: flagsReady, labelsReady: labelsReady, filterReady: filterReady, mailLoaded: mailLoaded,
                 sentLoaded: sentLoaded, keepDays: trashDays, locked: isLocked, listFailed: loadFailed))
+        // The Inbox's own unread mail: what rules or the owner filed into a folder no longer counts.
+        // The web still counts it (docs/PARITY-WITH-WEB.md).
         unreadCount =
             flagsReady && filterReady
-            ? MailView.countUnread(messages, address: address, flags: flags, filter: filter) : 0
+            ? MailView.countUnread(
+                messages, address: address, flags: flags, filter: filter, filedIn: Set(folders.map(\.id))) : 0
         hasDeleted = MailView.hasDeleted(
             flagsReady: flagsReady, filterReady: filterReady, mailLoaded: mailLoaded, sentLoaded: sentLoaded,
             messages: messages, sent: sent, address: address, flags: flags, filter: filter)
@@ -289,16 +293,8 @@ final class MailSession {
         }
     }
 
-    func toggleArchive(_ row: MailRow) {
-        setFlag(row.id, FlagDelta(archived: .set(!(flags[row.id]?.archived ?? false))))
-    }
-
     func toggleStar(_ hash: String) {
         setFlag(hash, FlagDelta(starred: .set(!(flags[hash]?.starred ?? false))))
-    }
-
-    func trash(_ row: MailRow) {
-        row.hashes.forEach(trash)
     }
 
     func trash(_ hash: String) {
@@ -348,6 +344,309 @@ final class MailSession {
             await deleteForever(item.hash)
             purging.remove(item.hash)
         }
+    }
+
+    // MARK: Filing
+
+    /// What filing works on: a swiped row, or the open message. Every copy of the message moves.
+    struct FilingTarget: Identifiable {
+        let id: String
+        let hashes: [String]
+
+        init(_ row: MailRow) {
+            id = row.id
+            hashes = row.hashes
+        }
+
+        init(hash: String) {
+            id = hash
+            hashes = [hash]
+        }
+    }
+
+    /// Filing asks first, unless the owner turned the question off: this message alone, or the
+    /// sender's mail now and from now on. Nothing moves until the owner answers.
+    struct FilingOffer: Identifiable, Equatable {
+        let id = UUID()
+        let sender: String
+        let senderName: String
+        /// Nil is back to the Inbox, which ends the sender's rule: the Inbox is where unsorted mail
+        /// lands anyway.
+        let folderID: String?
+        let folderName: String
+        /// Where the message is now ("the Inbox", or a folder's name): the sender's other mail comes
+        /// only from there.
+        let fromName: String
+        /// The swiped message (every copy of it).
+        let hashes: [String]
+        /// The sender's other mail that moves too if the owner says always.
+        let others: [String]
+
+        var toInbox: Bool { folderID == nil }
+
+        var title: String {
+            toInbox
+                ? "Move mail from \(senderName) back to the Inbox?"
+                : "Move mail from \(senderName) to \(folderName)?"
+        }
+
+        var answer: String { toInbox ? "Always use the Inbox" : "Always move to \(folderName)" }
+
+        var summary: String {
+            let later =
+                toInbox
+                ? "new mail from \(senderName) will arrive in the Inbox again."
+                : "new mail from \(senderName) will go there automatically."
+            let there = "from \(senderName) in \(fromName)"
+            switch others.count {
+            case 0: return "From now on, \(later)"
+            case 1: return "1 other message \(there) will move there now, and \(later)"
+            default: return "\(others.count) other messages \(there) will move there now, and \(later)"
+            }
+        }
+    }
+
+    private(set) var filingOffer: FilingOffer?
+
+    var swipeFiling: SwipeFiling { settings.swipeFiling }
+
+    /// A right swipe files where mail is waiting to be sorted: the Inbox and the folders.
+    func canFile(_ row: MailRow) -> Bool {
+        guard !row.isSent, !row.inDeleted else { return false }
+        switch folder {
+        case .inbox, .folder: return true
+        default: return false
+        }
+    }
+
+    /// Labels go on any received mail that isn't in Deleted: the relay refuses flags on Sent rows.
+    func canLabel(_ row: MailRow) -> Bool { !row.isSent && !row.inDeleted }
+
+    func folderName(_ id: String) -> String {
+        folders.first { $0.id == id }?.name ?? "a folder"
+    }
+
+    private var placeContext: PlaceContext {
+        PlaceContext(address: address, flags: flags, filter: filter, knownFolderIDs: Set(folders.map(\.id)))
+    }
+
+    /// Where a message lives now, for the open message's folder button.
+    func place(of hash: String) -> MailPlace? {
+        guard let message = (messages + sent).first(where: { $0.hash == hash }) else { return nil }
+        return MailView.placeOf(message, placeContext)
+    }
+
+    func placeName(_ place: MailPlace) -> String {
+        switch place {
+        case .inbox: "Inbox"
+        case .archive: "Archive"
+        case .sent: "Sent"
+        case .deleted: "Deleted"
+        case .folder(let id): folderName(id)
+        }
+    }
+
+    /// The folder picker's choices for a message: every folder but the one it's in, and the Inbox
+    /// unless it's already there (from Archive, the Inbox brings it back).
+    func filingChoices(for target: FilingTarget) -> (includeInbox: Bool, folders: [FolderDef]) {
+        let here = place(of: target.id)
+        return (here != .inbox, folders.filter { MailPlace.folder($0.id) != here })
+    }
+
+    func file(_ row: MailRow, in folderID: String?) {
+        file(FilingTarget(row), in: folderID)
+    }
+
+    /// Files a message in a folder, or back in the Inbox with nil. Asks first whether the rest of
+    /// the sender's mail should follow, and moves nothing until answered. Files straight away when
+    /// the owner turned the question off, or there's nothing to ask: a sender filing can't follow,
+    /// one a rule already files there, or (for the Inbox) no rule and nothing else to move.
+    func file(_ target: FilingTarget, in folderID: String?) {
+        guard swipeFiling.asksAboutSender, let message = messages.first(where: { $0.hash == target.id }) else {
+            return moveWithUndo(target.hashes, to: folderID)
+        }
+        let others = MailView.sameSenderMail(as: message, into: folderID, among: messages, placeContext)
+            .filter { !target.hashes.contains($0) }
+        guard let sender = MailView.filingSender(message) else { return moveWithUndo(target.hashes, to: folderID) }
+        let rule = swipeFiling.rule(for: sender)
+        if let folderID, rule?.folderID == folderID { return moveWithUndo(target.hashes, to: folderID) }
+        if folderID == nil, rule == nil, others.isEmpty { return moveWithUndo(target.hashes, to: folderID) }
+        let from = MailView.placeOf(message, placeContext)
+        filingOffer = FilingOffer(
+            sender: sender, senderName: name(for: sender), folderID: folderID,
+            folderName: folderID.map(folderName) ?? "the Inbox",
+            fromName: from.map { $0 == .inbox ? "the Inbox" : placeName($0) } ?? "the Inbox",
+            hashes: target.hashes, others: others)
+    }
+
+    /// A folder made from the picker, with the message filed in it straight after.
+    func createFolder(name: String, andFile target: FilingTarget) async {
+        if let id = await createFolder(name: name) { file(target, in: id) }
+    }
+
+    /// Always: this message and the sender's other mail move now, and from here on their new mail is
+    /// filed there by a rule, or, for the Inbox, simply isn't filed any more. Takes the offer it
+    /// answers, because the dialog closing clears `filingOffer` before this runs.
+    func acceptFilingOffer(_ offer: FilingOffer) async {
+        if filingOffer == offer { filingOffer = nil }
+        let before = UndoNotice.RuleUndo(sender: offer.sender, before: swipeFiling.rule(for: offer.sender))
+        moveWithUndo(offer.hashes + offer.others, to: offer.folderID, count: offer.others.count + 1, rule: before)
+        let (sender, now) = (offer.sender, Date())
+        if let folderID = offer.folderID {
+            _ = await change { $0.swipeFiling.setRule(sender: sender, folderID: folderID, now: now) }
+        } else {
+            await removeFilingRule(sender)
+        }
+    }
+
+    /// Just this one: the swiped message moves, nothing else does, and no rule is made.
+    func fileOnlyThis(_ offer: FilingOffer) {
+        if filingOffer == offer { filingOffer = nil }
+        moveWithUndo(offer.hashes, to: offer.folderID)
+    }
+
+    /// Cancel, or the question went away: nothing moves.
+    func dismissFilingOffer() {
+        filingOffer = nil
+    }
+
+    /// Moves by hand, with Undo: each message goes back to where it was, Archive included.
+    /// `count` is how many messages the banner names; `rule` is the sender's rule before an
+    /// "always", which Undo puts back.
+    private func moveWithUndo(
+        _ hashes: [String], to folderID: String?, count: Int = 1, rule: UndoNotice.RuleUndo? = nil
+    ) {
+        let restore = Dictionary(
+            hashes.map { hash in
+                let flag = flags[hash]
+                return (
+                    hash,
+                    FlagDelta(
+                        archived: flag?.archived.map { .set($0) } ?? .clear,
+                        folderId: flag?.folderId.map { .set($0) } ?? .clear)
+                )
+            }, uniquingKeysWith: { first, _ in first })
+        move(hashes, to: folderID)
+        let place = folderID.map(folderName) ?? "the Inbox"
+        let text = count > 1 ? "Moved \(count) messages to \(place)" : "Moved to \(place)"
+        undoNotice = UndoNotice(text: text, restore: restore, rule: rule)
+    }
+
+    private func move(_ hashes: [String], to folderID: String?) {
+        let delta = MailView.filingDelta(to: folderID)
+        for hash in hashes { setFlag(hash, delta) }
+    }
+
+    // MARK: Labels
+
+    func labelIDs(of target: FilingTarget) -> [String] { flags[target.id]?.labelIds ?? [] }
+
+    /// Puts the label on every copy of the message, or takes it off.
+    func toggleLabel(_ id: String, on target: FilingTarget) {
+        let current = labelIDs(of: target)
+        let next = current.contains(id) ? current.filter { $0 != id } : current + [id]
+        for hash in target.hashes { setFlag(hash, FlagDelta(labelIds: .set(next))) }
+    }
+
+    /// A label made from the picker, put on the message straight after.
+    func createLabel(name: String, color: String, andApply target: FilingTarget) async {
+        if let id = await createLabel(name: name, color: color) { toggleLabel(id, on: target) }
+    }
+
+    // MARK: Undo
+
+    /// Deleting or archiving says so for a few seconds, with a way back: a full swipe is easy to do
+    /// by accident. `restore` puts each message's changed mark back as it was.
+    struct UndoNotice: Identifiable, Equatable {
+        let id = UUID()
+        let text: String
+        let restore: [String: FlagDelta]
+        /// Filing with "always" also changed the sender's rule; Undo puts it back.
+        var rule: RuleUndo?
+
+        /// A sender's rule as it was before: nil when they had none.
+        struct RuleUndo {
+            let sender: String
+            let before: FilingRule?
+        }
+
+        static func == (a: Self, b: Self) -> Bool { a.id == b.id }
+    }
+
+    private(set) var undoNotice: UndoNotice?
+
+    /// Moves to Deleted, with Undo.
+    func trash(_ row: MailRow) {
+        trashWithUndo(row.hashes)
+    }
+
+    func trashWithUndo(_ hashes: [String]) {
+        let restore = Dictionary(
+            uniqueKeysWithValues: hashes.map { hash in
+                (hash, FlagDelta(trashedAt: flags[hash]?.trashedAt.map { .set($0) } ?? .clear))
+            })
+        hashes.forEach(trash)
+        undoNotice = UndoNotice(text: "Moved to Deleted", restore: restore)
+    }
+
+    /// Archives, or brings back from Archive, with Undo.
+    func toggleArchive(_ row: MailRow) {
+        setArchived(!(flags[row.id]?.archived ?? false), [row.id])
+    }
+
+    func setArchived(_ archived: Bool, _ hashes: [String]) {
+        let restore = Dictionary(
+            uniqueKeysWithValues: hashes.map { hash in
+                (hash, FlagDelta(archived: flags[hash]?.archived.map { .set($0) } ?? .clear))
+            })
+        for hash in hashes { setFlag(hash, FlagDelta(archived: .set(archived))) }
+        undoNotice = UndoNotice(text: archived ? "Archived" : "Moved out of Archive", restore: restore)
+    }
+
+    func undo(_ notice: UndoNotice) {
+        if undoNotice == notice { undoNotice = nil }
+        for (hash, delta) in notice.restore { setFlag(hash, delta) }
+        if let rule = notice.rule {
+            Task { _ = await change { $0.swipeFiling.restoreRule(rule.before, sender: rule.sender) } }
+        }
+    }
+
+    /// Its time ran out, or another took its place.
+    func dismissUndo(_ notice: UndoNotice) {
+        if undoNotice == notice { undoNotice = nil }
+    }
+
+    /// Ordinary email in a folder from someone who isn't a contact: filed by its address alone,
+    /// which nothing checked, so the row says so.
+    ///
+    /// DEV NOTE (low priority, first pass): this marks every such row in a folder, whether a rule or
+    /// the owner filed it, and a contact's mail never. A better mark would read the bridge's
+    /// SPF/DKIM/DMARC verdict (`BridgeAttestation`, in the encrypted body) and warn only when the
+    /// checks failed or are missing. See the dev note on `MailView.filingSender`.
+    func filedByAddressOnly(_ row: MailRow) -> Bool {
+        guard case .folder = folder else { return false }
+        return row.kind == .legacy && row.isNewSender
+    }
+
+    /// Files new mail the rules cover. Only once every source has answered: with flags missing,
+    /// mail the owner already moved back would look untouched.
+    private func applyFilingRules() {
+        guard flagsReady, labelsReady, filterReady, mailLoaded, settingsLoaded else { return }
+        for item in MailView.autoFiling(messages, rules: swipeFiling.rules, placeContext) {
+            setFlag(item.hash, MailView.filingDelta(to: item.folderID))
+        }
+    }
+
+    func setAsksAboutSender(_ on: Bool) async {
+        _ = await change { $0.swipeFiling.asksAboutSender = on }
+    }
+
+    func setFullSwipeArchives(_ on: Bool) async {
+        _ = await change { $0.swipeFiling.fullSwipeArchives = on }
+    }
+
+    func removeFilingRule(_ sender: String) async {
+        _ = await change { $0.swipeFiling.removeRule(sender: sender) }
     }
 
     // MARK: Composing
@@ -534,6 +833,18 @@ final class MailSession {
 
     func deleteFolder(_ id: String) async {
         await editLabels { try await self.services.labels.deleteFolder(id: id) }
+    }
+
+    /// The folders in the order the owner dragged them into: shown at once, then saved for every
+    /// device.
+    func reorderFolders(_ ids: [String]) {
+        folders = LabelStore.reordered(folders, by: ids, id: \.id)
+        Task { await editLabels { try await self.services.labels.reorderFolders(ids) } }
+    }
+
+    func reorderLabels(_ ids: [String]) {
+        labels = LabelStore.reordered(labels, by: ids, id: \.id)
+        Task { await editLabels { try await self.services.labels.reorderLabels(ids) } }
     }
 
     @discardableResult

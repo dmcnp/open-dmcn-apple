@@ -231,14 +231,18 @@ extension MailView {
     /// Received, non-control, unarchived, unread mail not in Deleted, excluding blocked senders.
     /// Trust is decided when a message is read, so an unknown sender counts. The inbox badge and the
     /// account switcher must both use this: two counts for one mailbox is worse than none.
+    ///
+    /// Mail filed in one of `filedIn` isn't counted either, so the count is the Inbox's own. Empty
+    /// counts filed mail too, as the browser still does.
     public static func countUnread(
         _ previews: [MailPreview], address: String?, flags: [String: FlagRecord], filter: FilterList?,
-        control: Set<String> = []
+        control: Set<String> = [], filedIn folders: Set<String> = []
     ) -> Int {
         previews.reduce(0) { count, m in
             guard isReceivedForMe(m, address: address), !control.contains(m.subject) else { return count }
             let flag = flags[m.hash]
             if flag?.archived == true || flag?.read == true || flag?.trashedAt != nil { return count }
+            if let folder = flag?.folderId, folders.contains(folder) { return count }
             if !isFromOwner(m, address: address), blocks(filter, m) { return count }
             return count + 1
         }

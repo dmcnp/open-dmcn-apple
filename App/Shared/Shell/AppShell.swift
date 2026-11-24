@@ -1,5 +1,7 @@
 import DMCNKit
 import SwiftUI
+import UIKit
+import UIKit.UIGestureRecognizerSubclass
 
 /// The persistent shell around every signed-in screen: the top bar, the drawer, the strips that
 /// say something standing about this session, and the composer floating over all of it.
@@ -30,6 +32,13 @@ struct AppShell: View {
 
             drawer
         }
+        // A swipe in from the left edge opens the menu, where the menu button is: on the mail list,
+        // not over an open message, whose edge swipe goes back.
+        .modifier(
+            EdgeSwipeOpens(enabled: session.section == .mail && !session.isReading && !drawerOpen) {
+                if !drawerOpen { setDrawer(true) }
+            }
+        )
         .sheet(isPresented: $showingAccounts) {
             AccountSheet(session: session).presentationDetents([.medium, .large])
         }
@@ -128,6 +137,90 @@ struct AppShell: View {
 
     private func setDrawer(_ open: Bool) {
         withAnimation(Motion.normal) { drawerOpen = open }
+    }
+}
+
+/// Opens the menu on a swipe that starts at the screen's left edge. A touch further in is left to
+/// the row it lands on, so its swipe still opens Folder and Label. iOS 18 and later; on 17 the menu
+/// button is the way in.
+private struct EdgeSwipeOpens: ViewModifier {
+    let enabled: Bool
+    let open: () -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18, *) {
+            content.gesture(EdgePan(enabled: enabled, onOpen: open))
+        } else {
+            content
+        }
+    }
+}
+
+@available(iOS 18, *)
+private struct EdgePan: UIGestureRecognizerRepresentable {
+    /// How far in from the edge a touch may start and still open the menu.
+    static let edgeWidth: CGFloat = 24
+
+    let enabled: Bool
+    let onOpen: () -> Void
+
+    func makeUIGestureRecognizer(context: Context) -> EdgeDrag {
+        let pan = EdgeDrag()
+        pan.delegate = context.coordinator
+        return pan
+    }
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> EdgeOnly { EdgeOnly() }
+
+    /// A drag that gives up the moment a touch lands away from the edge, so the list's scroll and
+    /// a row's swipe, which wait for it, aren't held up.
+    final class EdgeDrag: UIPanGestureRecognizer {
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            if let touch = touches.first, touch.location(in: touch.window).x > EdgePan.edgeWidth {
+                state = .failed
+                return
+            }
+            super.touchesBegan(touches, with: event)
+        }
+    }
+
+    /// Takes a drag from the edge only when it heads right; one heading up or down is a scroll.
+    /// Other drags (a row's swipe, the list's scroll) wait for it to say no.
+    final class EdgeOnly: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
+            let speed = pan.velocity(in: pan.view)
+            return speed.x > abs(speed.y)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer
+        ) -> Bool {
+            other is UIPanGestureRecognizer
+        }
+
+        /// A row with its Folder and Label buttons out takes the next touch to close them. Running
+        /// alongside that, one swipe from the edge closes the row and opens the menu.
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+    }
+
+    func updateUIGestureRecognizer(_ recognizer: EdgeDrag, context: Context) {
+        recognizer.isEnabled = enabled
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: EdgeDrag, context: Context) {
+        let moved = recognizer.translation(in: recognizer.view).x
+        let speed = recognizer.velocity(in: recognizer.view).x
+        switch recognizer.state {
+        case .changed where moved > 40: onOpen()
+        case .ended where moved > 16 || speed > 300: onOpen()
+        default: break
+        }
     }
 }
 

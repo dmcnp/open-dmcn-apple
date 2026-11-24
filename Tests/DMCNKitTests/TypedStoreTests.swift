@@ -135,6 +135,27 @@ private let fixedNow: StoreClock = { 1_760_000_000_000 }
             ])
     }
 
+    @Test func reorderingKeepsWhatAnotherDeviceAdded() async throws {
+        let storage = InMemoryPersonalStorage()
+        let labels = LabelStore(storage: storage)
+        let a = try await labels.createFolder(name: "A")
+        let b = try await labels.createFolder(name: "B")
+        let c = try await labels.createFolder(name: "C")
+        // The owner dragged C to the top, on a list that didn't have C yet.
+        try await labels.reorderFolders([b, a])
+        #expect(await labels.doc.folders.map(\.id) == [b, a, c])
+        try await labels.reorderFolders([c, "gone", a, b])
+        #expect(try await labels.get().doc.folders.map(\.name) == ["C", "A", "B"])
+    }
+
+    @Test func labelsReorderToo() async throws {
+        let labels = LabelStore(storage: InMemoryPersonalStorage())
+        let work = try await labels.createLabel(name: "Work", color: "#3b82f6")
+        let home = try await labels.createLabel(name: "Home", color: "#10b981")
+        try await labels.reorderLabels([home, work])
+        #expect(await labels.doc.labels.map(\.name) == ["Home", "Work"])
+    }
+
     @Test func aConcurrentEditIsRereadNotClobbered() async throws {
         // Another device adds a label between this one's read and its write.
         let storage = RacingStorage(races: 1) { inner, key in

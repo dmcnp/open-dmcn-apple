@@ -39,6 +39,10 @@ struct AccountSheet: View {
                 .background(.surfaceCard, in: .dsCard)
                 .dsBorder()
             }
+            DSButton("Settings", icon: .settings, variant: .secondary, fullWidth: true) {
+                dismiss()
+                session.section = .settings
+            }
             DSButton("Add another account", icon: .plus, variant: .secondary, fullWidth: true) {
                 dismiss()
                 Task { await model.signOut() }

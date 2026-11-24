@@ -31,12 +31,28 @@ struct MailColumn: View {
                 .padding(Space.s5)
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            if let notice = session.undoNotice {
+                UndoBanner(session: session, notice: notice)
+                    // Clear of the compose button while the list shows.
+                    .padding(.trailing, session.openMessage == nil ? 88 : Space.s4)
+                    .padding(.leading, Space.s4)
+                    .padding(.bottom, Space.s5 + 4)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .animation(Motion.normal, value: session.openMessage?.id)
+        .animation(Motion.normal, value: session.undoNotice?.id)
+        // Here rather than on the list: the open message files too. Hung on an empty view of its own
+        // so its plain text colour doesn't reach anything else.
+        .background { FilingQuestion(session: session).tint(.textStrong) }
     }
 }
 
 struct MailList: View {
     let session: MailSession
+    @State private var folderFor: MailSession.FilingTarget?
+    @State private var labelFor: MailSession.FilingTarget?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -76,11 +92,13 @@ struct MailList: View {
                     }
                 } else {
                     ForEach(session.rows) { row in
-                        MailRowView(row: row)
+                        MailRowView(row: row, caution: session.filedByAddressOnly(row))
                             .contentShape(Rectangle())
                             .onTapGesture { session.open(row) }
                             .plainRow()
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) { swipeButtons(row) }
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) { sortButtons(row) }
+                            // No full swipe in Deleted: from there, Delete is for good.
+                            .swipeActions(edge: .trailing, allowsFullSwipe: !row.inDeleted) { tidyButtons(row) }
                     }
                 }
             }
@@ -89,6 +107,59 @@ struct MailList: View {
             .background(.surfacePage)
             .refreshable { await session.refresh() }
         }
+        .modifier(FilingSheets(session: session, folderFor: $folderFor, labelFor: $labelFor))
+    }
+
+    /// Swipe right: Folder, then Label. A full swipe takes the first, so it opens the folder list.
+    @ViewBuilder private func sortButtons(_ row: MailRow) -> some View {
+        if session.canFile(row) {
+            swipeButton("Folder", icon: .folder, tint: .brand) { folderFor = .init(row) }
+        }
+        if session.canLabel(row) {
+            swipeButton("Label", icon: .tag, tint: .info) { labelFor = .init(row) }
+        }
+    }
+
+    /// Swipe left. The system puts the first button at the edge, and a full swipe takes it: Delete,
+    /// or Archive for those who chose it. Deleted mail offers a permanent delete and Restore.
+    @ViewBuilder private func tidyButtons(_ row: MailRow) -> some View {
+        if row.inDeleted {
+            swipeButton("Delete forever", icon: .trash, tint: .danger, role: .destructive) {
+                session.deleteForever(row)
+            }
+            swipeButton("Restore", icon: .undo, tint: .textMuted) { session.restore(row) }
+        } else if row.isSent {
+            deleteButton(row)
+        } else if session.swipeFiling.fullSwipeArchives {
+            archiveButton(row)
+            deleteButton(row)
+        } else {
+            deleteButton(row)
+            archiveButton(row)
+        }
+    }
+
+    private func deleteButton(_ row: MailRow) -> some View {
+        swipeButton("Delete", icon: .trash, tint: .danger, role: .destructive) { session.trash(row) }
+    }
+
+    private func archiveButton(_ row: MailRow) -> some View {
+        swipeButton(row.inArchive ? "Unarchive" : "Archive", icon: .archive, tint: .textMuted) {
+            session.toggleArchive(row)
+        }
+    }
+
+    private func swipeButton(
+        _ title: String, icon: Icon, tint: Color, role: ButtonRole? = nil, action: @escaping () -> Void
+    ) -> some View {
+        Button(role: role, action: action) {
+            Label {
+                Text(title)
+            } icon: {
+                icon.image(20)
+            }
+        }
+        .tint(tint)
     }
 
     private func listNote(_ text: String) -> some View {
@@ -101,54 +172,254 @@ struct MailList: View {
             .background(.surfaceCard)
             .overlay(alignment: .bottom) { Rectangle().fill(.borderSubtle).frame(height: 1) }
     }
+}
 
-    /// Deleted mail offers Restore and a permanent delete; everything else, Archive and Delete.
-    @ViewBuilder private func swipeButtons(_ row: MailRow) -> some View {
-        if row.inDeleted {
-            Button(role: .destructive) {
-                session.deleteForever(row)
-            } label: {
-                Label {
-                    Text("Delete forever")
-                } icon: {
-                    Icon.trash.image(20)
-                }
+/// "Move mail from Ada to Projects?" An alert, not a confirmation dialog: on a phone that shows as a
+/// popover, which hides Cancel.
+private struct FilingQuestion: View {
+    let session: MailSession
+
+    var body: some View {
+        Color.clear.alert(
+            session.filingOffer?.title ?? "",
+            isPresented: Binding(
+                get: { session.filingOffer != nil },
+                set: { if !$0 { session.dismissFilingOffer() } }),
+            presenting: session.filingOffer
+        ) { offer in
+            Button(offer.answer) {
+                Task { await session.acceptFilingOffer(offer) }
             }
-            .tint(.danger)
+            Button("Just this one") { session.fileOnlyThis(offer) }
+            Button("Cancel", role: .cancel) {}
+        } message: { offer in
+            Text(offer.summary)
+        }
+    }
+}
+
+/// "Moved to Deleted · Undo", for a few seconds after deleting or archiving.
+private struct UndoBanner: View {
+    let session: MailSession
+    let notice: MailSession.UndoNotice
+
+    var body: some View {
+        HStack(spacing: Space.s3) {
+            Text(notice.text)
+                .dsFont(.md, .medium)
+                .foregroundStyle(.surfaceCard)
+                .lineLimit(2)
+            Spacer(minLength: 0)
             Button {
-                session.restore(row)
+                session.undo(notice)
             } label: {
-                Label {
-                    Text("Restore")
-                } icon: {
-                    Icon.undo.image(20)
-                }
+                Text("Undo")
+                    .dsFont(.md, .semibold)
+                    .foregroundStyle(.surfaceCard)
+                    .padding(.horizontal, Space.s2)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
             }
-            .tint(.textMuted)
-        } else {
-            Button(role: .destructive) {
-                session.trash(row)
-            } label: {
-                Label {
-                    Text("Delete")
-                } icon: {
-                    Icon.trash.image(20)
-                }
-            }
-            .tint(.danger)
-            if !row.isSent {
-                Button {
-                    session.toggleArchive(row)
-                } label: {
-                    Label {
-                        Text(row.inArchive ? "Unarchive" : "Archive")
-                    } icon: {
-                        Icon.archive.image(20)
+            .buttonStyle(.plain)
+        }
+        .padding(.leading, Space.s4)
+        .padding(.trailing, Space.s2)
+        .frame(minHeight: 48)
+        .background(.textStrong, in: .dsCard)
+        .dsShadow()
+        .task(id: notice.id) {
+            try? await Task.sleep(for: .seconds(6))
+            session.dismissUndo(notice)
+        }
+    }
+}
+
+/// The folder and label pickers, for the list's swipe and the open message alike.
+struct FilingSheets: ViewModifier {
+    let session: MailSession
+    @Binding var folderFor: MailSession.FilingTarget?
+    @Binding var labelFor: MailSession.FilingTarget?
+    /// What was chosen, acted on once the sheet is gone so the follow-up question can show.
+    @State private var chosen: (target: MailSession.FilingTarget, choice: FolderPicker.Choice)?
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(
+                item: $folderFor,
+                onDismiss: {
+                    guard let chosen else { return }
+                    self.chosen = nil
+                    switch chosen.choice {
+                    case .folder(let id): session.file(chosen.target, in: id)
+                    case .new(let name): Task { await session.createFolder(name: name, andFile: chosen.target) }
                     }
                 }
-                .tint(.textMuted)
+            ) { target in
+                let choices = session.filingChoices(for: target)
+                FolderPicker(includeInbox: choices.includeInbox, folders: choices.folders) { choice in
+                    chosen = (target, choice)
+                    folderFor = nil
+                }
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(item: $labelFor) { target in
+                LabelPicker(session: session, target: target)
+                    .presentationDetents([.medium, .large])
+            }
+    }
+}
+
+/// Every folder, and the Inbox to put something back, with a way to make a new folder on the spot.
+struct FolderPicker: View {
+    enum Choice {
+        /// Nil is the Inbox.
+        case folder(String?)
+        case new(String)
+    }
+
+    let includeInbox: Bool
+    let folders: [FolderDef]
+    let pick: (Choice) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var naming = false
+    @State private var name = ""
+    @FocusState private var nameFocused: Bool
+
+    private var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if naming {
+                    Section {
+                        HStack(spacing: Space.s3) {
+                            Icon.folder.image(18).foregroundStyle(.textMuted)
+                            TextField("New folder name", text: $name)
+                                .focused($nameFocused)
+                                .submitLabel(.done)
+                                .onSubmit(create)
+                            Button("Create", action: create)
+                                .disabled(trimmed.isEmpty)
+                        }
+                    }
+                }
+                Section {
+                    if includeInbox {
+                        choice(icon: .inbox, name: "Inbox") { pick(.folder(nil)) }
+                    }
+                    ForEach(folders, id: \.id) { folder in
+                        choice(icon: .folder, name: folder.name) { pick(.folder(folder.id)) }
+                    }
+                }
+            }
+            .navigationTitle("Move to folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        naming = true
+                        nameFocused = true
+                    } label: {
+                        Label("New folder", systemImage: "folder.badge.plus")
+                    }
+                }
             }
         }
+    }
+
+    private func create() {
+        guard !trimmed.isEmpty else { return }
+        pick(.new(trimmed))
+    }
+
+    private func choice(icon: Icon, name: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Space.s3) {
+                icon.image(18).foregroundStyle(.textMuted)
+                Text(name).dsFont(.md).foregroundStyle(.textBody)
+            }
+        }
+    }
+}
+
+/// Every label, ticked where the message has it. A tap puts it on or takes it off; the sheet stays
+/// open for the next.
+struct LabelPicker: View {
+    let session: MailSession
+    let target: MailSession.FilingTarget
+    @Environment(\.dismiss) private var dismiss
+    @State private var naming = false
+    @State private var name = ""
+    @State private var color = LabelColor.choices[0]
+    @FocusState private var nameFocused: Bool
+
+    private var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
+
+    var body: some View {
+        let applied = session.labelIDs(of: target)
+        NavigationStack {
+            List {
+                if naming {
+                    Section {
+                        TextField("New label name", text: $name)
+                            .focused($nameFocused)
+                            .submitLabel(.done)
+                            .onSubmit(create)
+                        ColorSwatches(selected: $color)
+                        Button("Create", action: create)
+                            .disabled(trimmed.isEmpty)
+                    }
+                }
+                Section {
+                    if session.labels.isEmpty, !naming {
+                        Text("No labels yet. Make one with the button above.")
+                            .dsFont(.sm)
+                            .foregroundStyle(.textMuted)
+                    }
+                    ForEach(session.labels, id: \.id) { label in
+                        Button {
+                            session.toggleLabel(label.id, on: target)
+                        } label: {
+                            HStack(spacing: Space.s3) {
+                                Circle().fill(LabelColor.color(label.color)).frame(width: 12, height: 12)
+                                Text(label.name).dsFont(.md).foregroundStyle(.textBody)
+                                Spacer(minLength: 0)
+                                if applied.contains(label.id) {
+                                    Icon.check.image(16).foregroundStyle(.brand)
+                                }
+                            }
+                        }
+                        .accessibilityAddTraits(applied.contains(label.id) ? .isSelected : [])
+                    }
+                }
+            }
+            .navigationTitle("Labels")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        naming = true
+                        nameFocused = true
+                    } label: {
+                        Label("New label", systemImage: "plus")
+                    }
+                }
+            }
+        }
+    }
+
+    private func create() {
+        guard !trimmed.isEmpty else { return }
+        let (name, color) = (trimmed, color)
+        self.name = ""
+        naming = false
+        Task { await session.createLabel(name: name, color: color, andApply: target) }
     }
 }
 
@@ -162,6 +433,8 @@ extension View {
 /// One message in a list. Two lines and a snippet, as the web's phone layout.
 struct MailRowView: View {
     let row: MailRow
+    /// Filed by an address nothing checked: see `MailSession.filedByAddressOnly`.
+    var caution = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -182,7 +455,17 @@ struct MailRowView: View {
                         .lineLimit(1)
                         .truncationMode(.head)
                 }
-                if row.isNewSender { SmallTag(text: "NEW", weight: .semibold) }
+                if caution {
+                    Text("UNCHECKED")
+                        .dsFont(.xxs, .semibold)
+                        .foregroundStyle(.danger)
+                        .lineLimit(1)
+                        .padding(.horizontal, 5)
+                        .background(.dangerSubtle, in: .dsCard)
+                        .accessibilityLabel("Filed by address only. This sender wasn't checked.")
+                } else if row.isNewSender {
+                    SmallTag(text: "NEW", weight: .semibold)
+                }
                 if row.isStarred {
                     Icon.starFill.image(14).foregroundStyle(.warning).accessibilityLabel("Starred")
                 }

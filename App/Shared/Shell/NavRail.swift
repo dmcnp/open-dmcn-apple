@@ -27,19 +27,28 @@ struct NavRail: View {
                     folderRow(.archive, .archive, "Archive")
                     if session.hasDeleted { folderRow(.trash, .deleted, "Deleted") }
 
+                    // Press and hold a folder or label to drag it into a new order.
                     if !session.folders.isEmpty {
                         GroupLabel(text: "Folders")
-                        ForEach(session.folders, id: \.id) { folder in
-                            folderRow(.folder, .folder(folder.id), folder.name)
+                        ReorderableRows(
+                            ids: session.folders.map(\.id), onReorder: session.reorderFolders
+                        ) { id in
+                            if let folder = session.folders.first(where: { $0.id == id }) {
+                                folderRow(.folder, .folder(folder.id), folder.name)
+                            }
                         }
                     }
                     if !session.labels.isEmpty {
                         GroupLabel(text: "Labels")
-                        ForEach(session.labels, id: \.id) { label in
-                            NavRow(
-                                swatch: LabelColor.color(label.color), label: label.name,
-                                active: session.section == .mail && session.folder == .label(label.id)
-                            ) { choose(.label(label.id)) }
+                        ReorderableRows(
+                            ids: session.labels.map(\.id), onReorder: session.reorderLabels
+                        ) { id in
+                            if let label = session.labels.first(where: { $0.id == id }) {
+                                NavRow(
+                                    swatch: LabelColor.color(label.color), label: label.name,
+                                    active: session.section == .mail && session.folder == .label(label.id)
+                                ) { choose(.label(label.id)) }
+                            }
                         }
                     }
                 }
@@ -145,5 +154,49 @@ struct NavRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? .isSelected : [])
+    }
+}
+
+/// Rows the owner can put in a new order with iOS's own list reorder: press and hold one until it
+/// lifts, drag it, let go. A small list of its own, sized to its rows, that never scrolls, so it sits
+/// inside the menu or a Settings card like the other rows.
+struct ReorderableRows<Row: View>: View {
+    let ids: [String]
+    let onReorder: ([String]) -> Void
+    let row: (String) -> Row
+
+    init(ids: [String], onReorder: @escaping ([String]) -> Void, @ViewBuilder row: @escaping (String) -> Row) {
+        self.ids = ids
+        self.onReorder = onReorder
+        self.row = row
+    }
+
+    /// Measured from the rows themselves, so the list is exactly as tall as they are.
+    @State private var rowHeight: CGFloat = 44
+
+    var body: some View {
+        List {
+            ForEach(ids, id: \.self) { id in
+                row(id)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { height in
+                        if height > 0 { rowHeight = height }
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+            .onMove { from, to in
+                var order = ids
+                order.move(fromOffsets: from, toOffset: to)
+                onReorder(order)
+            }
+        }
+        .listStyle(.plain)
+        .scrollDisabled(true)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
+        .frame(height: rowHeight * CGFloat(ids.count))
     }
 }

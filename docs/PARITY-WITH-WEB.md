@@ -35,6 +35,11 @@ hand-built ones. Text follows Dynamic Type, which the web can't. The reader has 
 | Compose, reply, reply all, attachments, drafts, signature | Yes | Yes |
 | Recipient review, key-change warnings, add to contacts | Yes | Yes |
 | Forward | No | Yes, an addition |
+| Swipe to file or label, sender rules | No | Yes, an addition. The rules sync, but only the app applies them: mail that arrives while only the web is open stays in the Inbox until the app next checks |
+| Undo after delete, archive or moving to a folder | No | Yes, an addition: a short banner with Undo. Undoing a move also puts the sender's rule back as it was |
+| Reorder folders and labels | No | Yes, an addition: press and hold, then drag, in the menu or in Settings. The order is saved in the shared labels document |
+| Swipe in from the left edge to open the menu | No | Yes, an addition (iOS 18 and later) |
+| Inbox unread count | Counts unread mail in folders too | Counts only mail in the Inbox, so filed mail doesn't keep the number up |
 | Rich text composing | Yes | No: plain text only, and drafts resume as plain text |
 | Contacts, pins | Yes | Yes |
 | Contacts' pin-disagreement alert | Yes | Kit only, no icon yet |
